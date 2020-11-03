@@ -22,6 +22,7 @@ REAL, DIMENSION(:,:), ALLOCATABLE :: phi
 CHARACTER(15) :: scheme, infunction
 PROCEDURE(upwind), POINTER :: scheme_pointer
 PROCEDURE(sgn), POINTER :: function_pointer
+
 CALL MPI_INIT(ierr)
 CALL MPI_COMM_SIZE(MPI_COMM_WORLD, nprocs, ierr)
 CALL MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr)
@@ -83,23 +84,23 @@ END IF
 
 DO i= istart, iend
     x(i) = xl + i*dx
-    phi(i) = function_pointer(x(i), u, current_time) !function still undefined
-    WRITE(*,*) 'i=', i, 'Function value at x=', x(i), 'phi(i)=', phi(i)
+    phi(i,0) = function_pointer(x(i), u, current_time) !function still undefined
+    WRITE(*,*) 'i=', i, 'Function value at x=', x(i), 'phi(i)=', phi(i,0)
 END DO
 
-do i=0,nprocs-1
-    if ( id == i) then
-        open(10, file= 'initialised' // id // '.dat', form='formatted', status='replace')
-        do j = istart,iend
-            WRITE(10,*) phi(i)
-        end do
-        close(10)
-    end if
-end do
+!do i=0,nprocs-1
+!    if ( id == i) then
+!        open(10, file= 'initialised' // CHAR(id) // '.dat', form='formatted', status='replace')
+!        do j = istart,iend
+!            WRITE(10,*) phi(i,0)
+!        end do
+!        close(10)
+!    end if
+!end do
 
-if ( id == 0 ) then 
-    WRITE(*,*) 'WAIT FOR USER INPUT'
-    READ(*,*)
-END IF
+!if ( id == 0 ) then 
+!    WRITE(*,*) 'WAIT FOR USER INPUT'
+!    READ(*,*)
+!END IF
 CALL MPI_FINALIZE(ierr)
 END PROGRAM parallel_linear_advection

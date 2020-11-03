@@ -11,11 +11,11 @@ MODULE numerical_schemes
 CONTAINS
     SUBROUTINE upwind(flux, grid, spacing, tstep, vel, starti, endi) !INCOMPLETE SCHEME
         IMPLICIT NONE
-        INTEGER :: starti, endi
+        INTEGER, INTENT(IN) :: starti, endi
         INTEGER :: i
-        REAL, DIMENSION(:,:) :: flux
-        REAL, DIMENSION(:) :: grid
-        REAL :: spacing, tstep, vel
+        REAL, INTENT(INOUT), DIMENSION(0:,0:) :: flux
+        REAL, INTENT(IN), DIMENSION(:) :: grid
+        REAL, INTENT(IN) :: spacing, tstep, vel
 
         do i = starti, endi
             flux(i,1) = flux(i,0) - vel*tstep/spacing * (flux(i,0) - flux(i-1,0))
@@ -24,11 +24,11 @@ CONTAINS
     END SUBROUTINE upwind
     SUBROUTINE central(flux, grid, spacing, tstep, vel, starti, endi) !INCOMPLETE SCHEME
         IMPLICIT NONE
-        INTEGER :: starti, endi
+        INTEGER, INTENT(IN) :: starti, endi
         INTEGER :: i
-        REAL, DIMENSION(:,:) :: flux
-        REAL, DIMENSION(:) :: grid
-        REAL :: spacing, tstep, vel
+        REAL, INTENT(INOUT), DIMENSION(0:,0:) :: flux
+        REAL, INTENT(IN), DIMENSION(:) :: grid
+        REAL, INTENT(IN) :: spacing, tstep, vel
 
         do i = starti, endi
             flux(i,1) = flux(i,0) - vel*tstep/(2*spacing) * (flux(i+1,0) - flux(i-1,0))
