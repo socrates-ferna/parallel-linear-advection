@@ -1,10 +1,10 @@
 MODULE shared_declarations
 IMPLICIT NONE
 SAVE
-INTEGER, POINTER :: starti, endi
-INTEGER :: i
-REAL, DIMENSION(:,:), POINTER :: flux
-REAL, DIMENSION(:), POINTER :: grid
-REAL, POINTER :: spacing, tstep, vel
+INTEGER :: startiindex, endindex
+INTEGER :: i_counter
+REAL, DIMENSION(:,:), ALLOCATABLE :: flujo
+REAL, DIMENSION(:), ALLOCATABLE :: malla
+REAL :: espaciado, timstep, veloc
 
 END MODULE shared_declarations

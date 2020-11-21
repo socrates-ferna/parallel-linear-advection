@@ -13,15 +13,22 @@ IMPLICIT NONE
 CONTAINS
     REAL FUNCTION sgn(xin, u, t)
     IMPLICIT NONE
-    REAL, INTENT(IN) :: xin, u, t
-        sgn = 0.5*(SIGN(1., xin - u*t) + 1.)
+    REAL(KIND=8), INTENT(IN) :: xin, u, t
+        sgn = 0.5*(DSIGN(1.D0, xin - u*t) + 1.)
     END FUNCTION sgn
     !PENDING TO CHECK WHETHER POLYMORPHISM HERE IS POSSIBLE (TO PASS THE WHOLE ARRAY AND RECEIVE IT BACK)
+    !I THINK POLYMORPH IS NOT POSSIBLE BECAUSE OF THE DATA TYPE RIGIDITY
     !I THINK I HAVE TO INDICATE THAT THE INPUTS ARE ARRAYS TO DO A WHOLE ARRAY OPERATION
+    
     REAL FUNCTION exponential(xin, u, t)
     IMPLICIT NONE
-    REAL, INTENT(IN) :: xin, u, t
-        exponential = 0.5*EXP(-(xin - u*t)**2)
+    REAL(KIND=8), INTENT(IN) :: xin, u, t
+        exponential = 0.5D0*DEXP(-(xin - u*t)**2.D0)
     END FUNCTION exponential
 
+    REAL FUNCTION linear(xin, u, t)
+    IMPLICIT NONE
+    REAL(KIND=8), INTENT(IN) :: xin, u, t
+        linear = xin
+    END FUNCTION linear
 END MODULE input_functions
