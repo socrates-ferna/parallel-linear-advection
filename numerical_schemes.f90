@@ -14,23 +14,23 @@ IMPLICIT NONE
 
         INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
         INTEGER :: i
-        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
         !REAL, INTENT(IN), DIMENSION(:) :: grid
         REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
         ! TE FALTA PASARLE INCREMENT=1 O INCREMENT=-1 para que haga bien la toma de info en i-1
-        IF (id == 0) THEN
-            WRITE(*,'(A40,2I2)') 'Proc 0 has called upwind for indices', starti,endi
-            WRITE(*,111) (i, flux(i,0), i=starti,endi)
-            111 FORMAT('Values before:', /,&
-                       I2, F8.2)
-        END IF
+        !IF (id == 0) THEN
+        WRITE(*,'(A5,I4,A30,2I4)') 'Proc',id,'has called upwind for indices', starti,endi
+        !    WRITE(*,111) (i, flux(i,0), i=starti,endi)
+        !    111 FORMAT('Values before:', /,&
+        !               I2, F8.2)
+        !END IF
         DO i = starti, endi
             flux(i,fut) = flux(i,pres) - vel*tstep/spacing * (flux(i,pres) - flux(i-1,pres))
         END DO
         !comment
     END SUBROUTINE UPWIND
     
-    SUBROUTINE CENTRAL(flux, spacing, tstep, vel, starti, endi, id, d1, d2,pres,fut)
+    SUBROUTINE CENTRAL(flux, spacing, tstep, vel, starti, endi,id,d1,d2,pres,fut)
 
         INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
         INTEGER :: i
@@ -47,7 +47,7 @@ IMPLICIT NONE
 
         INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
         INTEGER :: i
-        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
         !REAL, INTENT(IN), DIMENSION(:) :: grid
         REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
         DO i = starti, endi
@@ -61,7 +61,7 @@ IMPLICIT NONE
 
         INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
         INTEGER :: i
-        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
         !REAL, INTENT(IN), DIMENSION(:) :: grid
         REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
         DO i = starti, endi
@@ -73,7 +73,7 @@ IMPLICIT NONE
     SUBROUTINE LAXWENDROFF(flux, spacing, tstep, vel, starti, endi, id, d1, d2,pres,fut)
         INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
         INTEGER :: i
-        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
         !REAL, INTENT(IN), DIMENSION(:) :: grid
         REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
         DO i = starti, endi

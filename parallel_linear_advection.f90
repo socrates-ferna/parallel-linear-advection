@@ -15,12 +15,12 @@ USE input_functions, only: SGN, EXPONENTIAL, LINEAR
 ! BLOCK 0: DECLARATIONS AND MPI INIT
 !-----------------------------------------------------------
 IMPLICIT NONE
-INTEGER :: stat(MPI_STATUS_SIZE), nprocs, id, ierr, reqs(2), nbstat !parallel vars
+INTEGER :: stat(MPI_STATUS_SIZE), nprocs, id, ierr, send_req, recv_req, nbstat !parallel vars
 INTEGER :: i, j, npoints, nperproc, spatialStencil, timeStencil, istart, iend, iteration, &
              senderproc, receiverproc, sentbufferstart, sentbufferend, receivedbufferstart, &
              receivedbufferend, past, present, future
 INTEGER :: bstart, bend, intstart,intend ! boundary (receive info form other proc) indices and interior indices
-REAL(KIND=8) :: u, CFL, xl, xr, dx, dt, current_time
+REAL(KIND=8) :: u, CFL, xl, xr, dx, dt, current_time, recvbuf=0.0D0, sentbuf=53.0D0
 REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: controlTimes, x
 REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: phi
 LOGICAL :: send, receive, special_init
@@ -38,12 +38,12 @@ CALL MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr)
 !-----------------------------------------------------------
 u = 1.0D0
 scheme = 'upwind'
-infunction = 'sgn'
+infunction = 'linear'
 CFL = 1.0D0
-npoints = 10000
+npoints = 100
 xl = -200.0D0
 xr = 200.0D0 
-ALLOCATE(x(0:npoints-1))
+!ALLOCATE(x(0:npoints-1))
 ALLOCATE(controlTimes(0:2)); controlTimes = [0.D0, 5.0D0, 10.0D0] !user should be able to define start, end, writeStep
 current_time = controlTimes(0)
 iteration = 0
@@ -51,32 +51,41 @@ iteration = 0
 !-----------------------------------------------------------
 !BLOCK I.I: AUXILIARY CALCULATIONS DUE TO INPUT
 !-----------------------------------------------------------
-past = 0
-present = 1
-future = 2
+!past = 0
+!present = 1
+!future = 2
 
 SELECT CASE (scheme) !remember to add the function in numerical_schemes.f90
     CASE ('upwind')
         spatialStencil = 1 !we will have to define a timeStencil and a spatialStencil in future versions (LeapFrog)
         timeStencil = 1
+        present = 0
+        future = 1
         special_init = .FALSE.
         SCHEME_POINTER => UPWIND !MODULE NOT WORKING
-        WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spatialStencil, timeStencil
+        !WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spatialStencil, timeStencil
     CASE ('central')
         spatialStencil = 1
         timeStencil = 1
+        present = 0
+        future = 1
         special_init = .FALSE.
         SCHEME_POINTER => CENTRAL
         WRITE(*,*) 'Chosen scheme is central, stencilSize=', spatialStencil, timeStencil
     CASE ('lax')
         spatialStencil = 1
         timeStencil = 1
+        present = 0
+        future = 1
         special_init = .FALSE.
         SCHEME_POINTER => LAX
         WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spatialStencil, timeStencil
     CASE ('leapfrog')
         spatialStencil = 1
         timeStencil = 2
+        past = 0
+        present = 1
+        future = 2
         special_init = .TRUE.
         SCHEME_POINTER => LEAPFROG
         WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', spatialStencil, timeStencil
@@ -99,11 +108,12 @@ SELECT CASE (infunction)
         FUNCTION_POINTER => LINEAR
 END SELECT
 
+ALLOCATE(x(0-spatialStencil:npoints-1+spatialStencil))
 
 dx = (xr - xl) / REAL(npoints-1) !a segment of npoints has npoints-1 interior intervals
 dt = CFL * dx / abs(u) ! CFL=u*dt/dx
 nperproc = npoints / nprocs !Number of points assigned to each proc before remainder
-
+WRITE(*,*) 'nperproc:', nperproc
 !WRITE(*,005) id,'it time dt', iteration, current_time, dt
 
 !-----------------------------------------------------------
@@ -143,7 +153,7 @@ ELSE
     
 END IF
 
-001 FORMAT(3(A7,I3))
+001 FORMAT(3(A7,I5))
 002 FORMAT(A2,I2,2(A10,F8.3))
 
 ALLOCATE(phi(istart-spatialStencil:iend+spatialStencil, 0:timeStencil));phi(:,:)=0.0 !missing poner las BCs en todos los tsteps
@@ -169,8 +179,8 @@ IF ( u >= 0.0 ) THEN
     sentbufferend = iend
     receivedbufferstart = istart - spatialStencil
     receivedbufferend = istart - 1
-    WRITE(*,100) 'u+',' Processor',id,'sends indices',sentbufferstart,':',sentbufferend
-    WRITE(*,100) 'u+',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
+    !WRITE(*,100) 'u+',' Processor',id,'sends indices',sentbufferstart,':',sentbufferend
+    !WRITE(*,100) 'u+',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
     bstart = istart
     bend = istart + spatialStencil -1
     intstart = istart + spatialStencil
@@ -183,8 +193,8 @@ ELSE IF ( u <= 0.0 ) THEN
     sentbufferend = istart + spatialStencil - 1
     receivedbufferstart = iend + spatialStencil
     receivedbufferend = iend + 1
-    WRITE(*,100) 'u-',' Processor',id,'sends indices',sentbufferstart,':',sentbufferend
-    WRITE(*,100) 'u-',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
+    !WRITE(*,100) 'u-',' Processor',id,'sends indices',sentbufferstart,':',sentbufferend
+    !WRITE(*,100) 'u-',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
     bstart = iend - spatialStencil +1
     bend = iend
     intstart = istart
@@ -205,75 +215,86 @@ END IF
 !-----------------------------------------------------------
 010 FORMAT(A9,I2,A25)
 005 FORMAT(I3,A20,I5,2F10.2)
-020 FORMAT(I4, A25, 2I2, F7.2)
+020 FORMAT(I4, A25, 2I4, F7.2,A10,I3)
+
+IF (id == 1) THEN
+    phi(receivedbufferstart:receivedbufferend,present)= 123.88D0
+END IF
+
 
 WRITE(*,010) 'Processor',id,'waiting for the barrier'
 call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
 DO 
-    dt=min(dt,controlTimes(2)-current_time)
-    !WRITE(*,005) id,'INIT it time dt', iteration, current_time, dt
+    !dt=min(dt,controlTimes(2)-current_time)
+    WRITE(*,005) id,'INIT it time dt', iteration, current_time, dt
 
     IF (send .and. receive) THEN !sospecho que hay riesgo de que si se descompensan los procesadores los mensajes terminen siendo machacados incluso si son recibiods
+        !sentbuf = phi(sentbufferstart,present)
         CALL MPI_ISEND(phi(sentbufferstart:sentbufferend,present),spatialStencil, &
-        MPI_REAL,receiverproc,0,MPI_COMM_WORLD,reqs(1),ierr)
-        !WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend,&
-        phi(sentbufferstart:sentbufferend,present)
+        MPI_DOUBLE_PRECISION,receiverproc,0,MPI_COMM_WORLD,send_req,ierr)
+        WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
+        phi(sentbufferstart:sentbufferend,present),'iteration',iteration
 
-        !WRITE(*,010) 'Processor', id, 'receives'
+        WRITE(*,010) 'Processor', id, 'receives'
         
         CALL MPI_IRECV(phi(receivedbufferstart:receivedbufferend,present),spatialStencil, &
-        MPI_REAL,senderproc,0,MPI_COMM_WORLD,reqs(2),ierr)
+        MPI_DOUBLE_PRECISION,senderproc,0,MPI_COMM_WORLD,recv_req,ierr)
         
+
         CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
         
-        CALL MPI_WAIT(reqs(2),MPI_STATUS_IGNORE,ierr)
+        CALL MPI_WAIT(recv_req,MPI_STATUS_IGNORE,ierr)
+        WRITE(*,'(A15,F8.2)') 'recvbuf is', phi(receivedbufferstart:receivedbufferend,present)
+        !phi(receivedbufferstart:receivedbufferend,present)=recvbuf
         
-        !WRITE(*,020) id, 'Received buffer index is',receivedbufferstart,&
-        receivedbufferend, phi(receivedbufferstart:receivedbufferend,present)
+        WRITE(*,*) 'Proc',id,'recv_req:',recv_req,'after receiving'
+        WRITE(*,020) id, 'Received buffer index is',receivedbufferstart,receivedbufferend, & 
+        phi(receivedbufferstart:receivedbufferend,present),'iteration',iteration
         
         CALL SCHEME_POINTER(phi, dx, dt, u, bstart, bend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future)
 
-        CALL MPI_WAIT(reqs(1),MPI_STATUS_IGNORE,ierr) !ojalá esto baste para que no se machaquen mensajes si el procesador se adelanta  &
+        CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr) !ojalá esto baste para que no se machaquen mensajes si el procesador se adelanta  &
         !y manda de nuevo otro bufer antes de que se haya computado el boundary del receptor
 
     ELSE IF ( send ) THEN
         CALL MPI_ISEND(phi(sentbufferstart:sentbufferend,present),spatialStencil, &
-        MPI_REAL,receiverproc,0,MPI_COMM_WORLD,reqs(1),ierr)
-        !WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend,&
-        phi(sentbufferstart:sentbufferend,present)
+        MPI_DOUBLE_PRECISION,receiverproc,0,MPI_COMM_WORLD,send_req,ierr)
+        WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
+        phi(sentbufferstart:sentbufferend,present),'iteration',iteration
         
         IF (id == 0) THEN
-            CALL SCHEME_POINTER(phi, dx, dt, u, istart+1, iend,id, &
+            CALL SCHEME_POINTER(phi, dx, dt, u, istart+1, iend-1,id, &
             istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
-            CALL MPI_WAIT(reqs(1),MPI_STATUS_IGNORE,ierr)
-            !WRITE(*,10) 'Proc',id,'has waited for the receival ISEND'
-            
+            CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
+            WRITE(*,'(A5,I4,A22,I3)') 'Proc',id,'has waited receival',iteration
+            CALL SCHEME_POINTER(phi, dx, dt, u, iend,iend,id, &
+            istart-spatialStencil,iend+spatialStencil,present,future)
         ELSE IF (id == nprocs - 1) THEN
             CALL SCHEME_POINTER(phi, dx, dt, u, istart, iend-1,id, &
             istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
-            CALL MPI_WAIT(reqs(1),MPI_STATUS_IGNORE,ierr)
+            CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
         END IF
     ELSE IF ( receive ) THEN
         !WRITE(*,010) 'Processor', id, 'receives'
         
         CALL MPI_IRECV(phi(receivedbufferstart:receivedbufferend,present),spatialStencil, &
-        MPI_REAL,senderproc,0,MPI_COMM_WORLD,reqs(2),ierr)
+        MPI_DOUBLE_PRECISION,senderproc,0,MPI_COMM_WORLD,recv_req,ierr)
         
         CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
         
-        CALL MPI_WAIT(reqs(2),MPI_STATUS_IGNORE,ierr)
+        CALL MPI_WAIT(recv_req,MPI_STATUS_IGNORE,ierr)
         
-        !WRITE(*,020) id, 'Received buffer index is',receivedbufferstart,&
-        receivedbufferend, phi(receivedbufferstart:receivedbufferend,present)
+        WRITE(*,020) id, 'Received buffer index is',receivedbufferstart, receivedbufferend, & 
+        phi(receivedbufferstart:receivedbufferend,present),'iteration',iteration
         
         CALL SCHEME_POINTER(phi, dx, dt, u, bstart, bend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future)
     ELSE
-        !WRITE(*,'(A4,1X,I2,A50)') 'Proc',id,'reached a logical error sending or receiving info'
+        WRITE(*,'(A4,1X,I2,A50)') 'Proc',id,'reached a logical error sending or receiving info'
         CALL MPI_FINALIZE(ierr)
         STOP
     END IF
@@ -281,16 +302,22 @@ DO
     phi(:,present)=phi(:,future)
     iteration = iteration + 1;
     current_time = current_time + dt
-    !WRITE(*,005) id,'it time dt', iteration, current_time, dt
-    IF (current_time >= controlTimes(2))EXIT
+    WRITE(*,005) id,'it time dt', iteration, current_time, dt
+    !CALL MPI_WAITALL(2,[send_req, recv_req],MPI_STATUSES_IGNORE,ierr)
+    IF (current_time >= 20.0D0 )EXIT
 END DO
 
 !400 FORMAT(A2,1X,F10.4)
 
 !WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
-DO i=istart,iend
-    !WRITE(*,*) 'id',id, i, phi(i,present)
-END DO
+!DO i=istart,iend
+WRITE(*,121) (i, phi(i,present), i=istart,iend)
+121 FORMAT(6(I5,F10.2),/)
+!END DO
 
 CALL MPI_FINALIZE(ierr)
 END PROGRAM parallel_linear_advection
+
+
+!no puedo modificar el sent bufer hasta que no esté explícitamente terminado. No vale la de llamar al scheme pointer solo una vez
+!el request identifica la operación iniciada por la nonblocking call. guarda el tag, el buffer, communicator, source and dest
