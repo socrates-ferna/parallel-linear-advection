@@ -10,10 +10,11 @@ MODULE numerical_schemes
 !---------------------------------------------------------------------------------------\
 IMPLICIT NONE
     CONTAINS
-    SUBROUTINE upwind(flux, spacing, tstep, vel, starti, endi,id,d1,d2) !INCOMPLETE SCHEME
-        INTEGER, INTENT(IN) :: starti, endi, id, d1, d2
+    SUBROUTINE UPWIND(flux, spacing, tstep, vel, starti, endi,id,d1,d2,pres,fut) !INCOMPLETE SCHEME
+
+        INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
         INTEGER :: i
-        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:1) :: flux
+        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
         !REAL, INTENT(IN), DIMENSION(:) :: grid
         REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
         ! TE FALTA PASARLE INCREMENT=1 O INCREMENT=-1 para que haga bien la toma de info en i-1
@@ -24,23 +25,64 @@ IMPLICIT NONE
                        I2, F8.2)
         END IF
         DO i = starti, endi
-            flux(i,1) = flux(i,0) - vel*tstep/spacing * (flux(i,0) - flux(i-1,0))
+            flux(i,fut) = flux(i,pres) - vel*tstep/spacing * (flux(i,pres) - flux(i-1,pres))
         END DO
-
-    END SUBROUTINE upwind
+        !comment
+    END SUBROUTINE UPWIND
     
-    SUBROUTINE central(flux, spacing, tstep, vel, starti, endi,id, d1, d2) !INCOMPLETE SCHEME
-        INTEGER, INTENT(IN) :: starti, endi, id, d1, d2
+    SUBROUTINE CENTRAL(flux, spacing, tstep, vel, starti, endi, id, d1, d2,pres,fut)
+
+        INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
         INTEGER :: i
-        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:1) :: flux
+        REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
         !REAL, INTENT(IN), DIMENSION(:) :: grid
         REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
         DO i = starti, endi
-            flux(i,1) = flux(i,0) - vel*tstep/(2*spacing) * (flux(i+1,0) - flux(i-1,0))
+            flux(i,fut) = flux(i,pres) - vel*tstep/(2*spacing) * (flux(i+1,pres) - flux(i-1,pres))
         END DO
 
-        flux(starti:endi, 0) = flux(starti:endi, 1)
+    END SUBROUTINE CENTRAL
 
-    END SUBROUTINE central
+    SUBROUTINE LAX(flux, spacing, tstep, vel, starti, endi, id, d1, d2,pres,fut)
+
+        INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
+        INTEGER :: i
+        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        !REAL, INTENT(IN), DIMENSION(:) :: grid
+        REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
+        DO i = starti, endi
+            flux(i,fut) =  0.5D0 * (flux(i+1,pres) - flux(i-1,pres)) - &
+            vel*tstep/(2*spacing) * (flux(i+1,pres) - vel)
+        END DO
+
+    END SUBROUTINE LAX
+    
+    SUBROUTINE LEAPFROG(flux, spacing, tstep, vel, starti, endi, id, d1, d2,pres,fut)
+
+        INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
+        INTEGER :: i
+        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        !REAL, INTENT(IN), DIMENSION(:) :: grid
+        REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
+        DO i = starti, endi
+            flux(i,fut) = flux(i,pres-1) - vel*tstep/spacing * (flux(i+1,pres) - flux(i-1,pres))
+        END DO
+
+    END SUBROUTINE LEAPFROG
+
+    SUBROUTINE LAXWENDROFF(flux, spacing, tstep, vel, starti, endi, id, d1, d2,pres,fut)
+        INTEGER, INTENT(IN) :: starti, endi, id, d1, d2,pres,fut
+        INTEGER :: i
+        REAL, INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        !REAL, INTENT(IN), DIMENSION(:) :: grid
+        REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
+        DO i = starti, endi
+            flux(i,fut) = flux(i,pres) - vel*tstep/(2*spacing) * (flux(i+1,pres) - flux(i-1,pres))&
+            + 0.5D0 * (vel**2) * (tstep**2) * (flux(i+1,pres) - 2*flux(i,pres) + flux(i+1,pres)) / (spacing**2)
+        END DO
+
+        !flux(starti:endi, 0) = flux(starti:endi, 1
+
+    END SUBROUTINE LAXWENDROFF
 
 END MODULE numerical_schemes
