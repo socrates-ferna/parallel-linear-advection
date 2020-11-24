@@ -1,7 +1,7 @@
 PROGRAM parallel_linear_advection
 USE MPI
-USE numerical_schemes, only: UPWIND, CENTRAL, LAX, LEAPFROG, LAXWENDROFF
-USE input_functions, only: SGN, EXPONENTIAL, LINEAR
+USE numerical_schemes, only: UPWIND, CENTRAL, LAX, LEAPFROG, LAXWENDROFF!, ANALYTICAL
+USE input_functions, only: SGN, EXPONENTIAL, LINEAR, ANALYTICAL
 !USE shared_declarations
 !-----------------------------------------------------------------------
 ! Purpose: 1D code for parallel resolution of the linear advection equation
@@ -20,7 +20,7 @@ INTEGER :: i, j, npoints, nperproc, spatialStencil, timeStencil, istart, iend, i
              senderproc, receiverproc, sentbufferstart, sentbufferend, receivedbufferstart, &
              receivedbufferend, past, present, future
 INTEGER :: bstart, bend, intstart,intend ! boundary (receive info form other proc) indices and interior indices
-REAL(KIND=8) :: u, CFL, xl, xr, dx, dt, current_time, recvbuf=0.0D0, sentbuf=53.0D0
+REAL(KIND=8) :: u, CFL, xl, xr, dx, dt, current_time !, recvbuf=0.0D0, sentbuf=53.0D0
 REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: controlTimes, x
 REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: phi
 LOGICAL :: send, receive, special_init
@@ -40,9 +40,9 @@ u = 1.0D0
 scheme = 'upwind'
 infunction = 'linear'
 CFL = 1.0D0
-npoints = 100
-xl = -200.0D0
-xr = 200.0D0 
+npoints = 20
+xl = -40.0D0
+xr = 40.0D0 
 !ALLOCATE(x(0:npoints-1))
 ALLOCATE(controlTimes(0:2)); controlTimes = [0.D0, 5.0D0, 10.0D0] !user should be able to define start, end, writeStep
 current_time = controlTimes(0)
@@ -108,13 +108,13 @@ SELECT CASE (infunction)
         FUNCTION_POINTER => LINEAR
 END SELECT
 
-ALLOCATE(x(0-spatialStencil:npoints-1+spatialStencil))
+ALLOCATE(x(0-spatialStencil:npoints-1+spatialStencil));x(:)=0
 
 dx = (xr - xl) / REAL(npoints-1) !a segment of npoints has npoints-1 interior intervals
 dt = CFL * dx / abs(u) ! CFL=u*dt/dx
 nperproc = npoints / nprocs !Number of points assigned to each proc before remainder
-WRITE(*,*) 'nperproc:', nperproc
-!WRITE(*,005) id,'it time dt', iteration, current_time, dt
+!WRITE(*,*) 'nperproc:', nperproc
+!!WRITE(*,005) id,'it time dt', iteration, current_time, dt
 
 !-----------------------------------------------------------
 !BLOCK II: DOMAIN SPLITTING AND INITIALISATION
@@ -162,10 +162,19 @@ ALLOCATE(phi(istart-spatialStencil:iend+spatialStencil, 0:timeStencil));phi(:,:)
 !THIS IS NOT GOOD PROGRAMMING PRACTICE, DO X INIT FIRST AND THEN PHI INIT
 DO i= istart-spatialStencil, iend+spatialStencil !procs on domain limits will have "ghost elements"
     x(i) = xl + i*dx
-    phi(i,present) = FUNCTION_POINTER(x(i), u, current_time)
-    !WRITE(*,002) 'i=', i, 'phi at x=', x(i), 'phi(i)=', phi(i,present)
+    WRITE(*,'(A2,I2,A2,F8.2,I10)') 'x(',i,')=',x(i), id
 END DO
+    
+CALL ANALYTICAL(phi, istart-spatialStencil,iend+spatialStencil,FUNCTION_POINTER, &
+                present, x, u, current_time, & 
+                istart-spatialStencil,iend+spatialStencil,future,id)
+    !phi(i,present) = FUNCTION_POINTER(x(i), u, current_time)
+    !WRITE(*,002) 'i=', i, 'phi at x=', x(i), 'phi(i)=', phi(i,present)
 
+!do i=istart-spatialStencil, iend+spatialStencil
+!    WRITE(*,'(A4,I2,A2,F8.2)') 'phi(',i,')=',phi(i,present)
+!    WRITE(*,'(A2,I2,A2,F8.2)') 'x(',i,')=',x(i)
+!end do
 
 !CALL A WRITING SUBROUTINE HERE
 
@@ -217,9 +226,9 @@ END IF
 005 FORMAT(I3,A20,I5,2F10.2)
 020 FORMAT(I4, A25, 2I4, F7.2,A10,I3)
 
-IF (id == 1) THEN
-    phi(receivedbufferstart:receivedbufferend,present)= 123.88D0
-END IF
+!!IF (id == 1) THEN
+!    phi(receivedbufferstart:receivedbufferend,present)= 123.88D0
+!END IF
 
 
 WRITE(*,010) 'Processor',id,'waiting for the barrier'
@@ -236,7 +245,7 @@ DO
         WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
         phi(sentbufferstart:sentbufferend,present),'iteration',iteration
 
-        WRITE(*,010) 'Processor', id, 'receives'
+        !WRITE(*,010) 'Processor', id, 'receives'
         
         CALL MPI_IRECV(phi(receivedbufferstart:receivedbufferend,present),spatialStencil, &
         MPI_DOUBLE_PRECISION,senderproc,0,MPI_COMM_WORLD,recv_req,ierr)
@@ -249,7 +258,7 @@ DO
         WRITE(*,'(A15,F8.2)') 'recvbuf is', phi(receivedbufferstart:receivedbufferend,present)
         !phi(receivedbufferstart:receivedbufferend,present)=recvbuf
         
-        WRITE(*,*) 'Proc',id,'recv_req:',recv_req,'after receiving'
+        !WRITE(*,*) 'Proc',id,'recv_req:',recv_req,'after receiving'
         WRITE(*,020) id, 'Received buffer index is',receivedbufferstart,receivedbufferend, & 
         phi(receivedbufferstart:receivedbufferend,present),'iteration',iteration
         
@@ -302,7 +311,7 @@ DO
     phi(:,present)=phi(:,future)
     iteration = iteration + 1;
     current_time = current_time + dt
-    WRITE(*,005) id,'it time dt', iteration, current_time, dt
+    !WRITE(*,005) id,'it time dt', iteration, current_time, dt
     !CALL MPI_WAITALL(2,[send_req, recv_req],MPI_STATUSES_IGNORE,ierr)
     IF (current_time >= 20.0D0 )EXIT
 END DO

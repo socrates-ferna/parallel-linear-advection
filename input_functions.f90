@@ -31,5 +31,21 @@ CONTAINS
     REAL(KIND=8), INTENT(IN) :: xin, u, t
         LINEAR = xin
     END FUNCTION LINEAR
+
+    SUBROUTINE ANALYTICAL(flux, start, end,fn,timeindex,x_arr,vel,time,d1,d2,fut,id)
+        INTEGER, INTENT(IN) :: start, end, timeindex, fut, d1, d2,id
+        INTEGER :: i
+        REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
+        REAL(KIND=8), INTENT(IN), DIMENSION(:) :: x_arr
+        PROCEDURE(SGN),POINTER :: fn
+        REAL(KIND=8), INTENT(IN) :: time, vel
+        WRITE(*,'(I2,A20,2I2)') id, 'Has called analytical', d1,d2
+        DO i=start,end
+            WRITE(*,'(A2,I2,A2,F8.2,I5)') 'x(',i,')=',x_arr(i), id
+            flux(i,timeindex) = fn(x_arr(i), vel, time)
+        END DO
+
+    END SUBROUTINE ANALYTICAL
+
     !comment
 END MODULE input_functions
