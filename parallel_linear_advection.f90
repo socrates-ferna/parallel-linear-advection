@@ -10,7 +10,7 @@ USE input_functions, only: SGN, EXPONENTIAL, LINEAR, ANALYTICAL
 ! Licence: This code is distributed under GNU GPL Licence
 ! Author: Sócrates Fernández Fernández, s(dot)fernaferna(at)gmail(dot)com
 !
-! LAST MOD: 04/11/2020
+! LAST MOD: 25/11/2020
 !-----------------------------------------------------------------------
 ! BLOCK 0: DECLARATIONS AND MPI INIT
 !-----------------------------------------------------------
@@ -108,7 +108,8 @@ SELECT CASE (infunction)
         FUNCTION_POINTER => LINEAR
 END SELECT
 
-ALLOCATE(x(0-spatialStencil:npoints-1+spatialStencil));x(:)=0
+!ALLOCATE(x(0-spatialStencil:npoints-1+spatialStencil));x(:)=0
+
 
 dx = (xr - xl) / REAL(npoints-1) !a segment of npoints has npoints-1 interior intervals
 dt = CFL * dx / abs(u) ! CFL=u*dt/dx
@@ -156,10 +157,10 @@ END IF
 001 FORMAT(3(A7,I5))
 002 FORMAT(A2,I2,2(A10,F8.3))
 
+ALLOCATE(x(istart-spatialStencil:iend+spatialStencil));x(:)=0
 ALLOCATE(phi(istart-spatialStencil:iend+spatialStencil, 0:timeStencil));phi(:,:)=0.0 !missing poner las BCs en todos los tsteps
-!WRITE(*,001) 'Alloc',id
 
-!THIS IS NOT GOOD PROGRAMMING PRACTICE, DO X INIT FIRST AND THEN PHI INIT
+
 DO i= istart-spatialStencil, iend+spatialStencil !procs on domain limits will have "ghost elements"
     x(i) = xl + i*dx
     WRITE(*,'(A2,I2,A2,F8.2,I10)') 'x(',i,')=',x(i), id
@@ -192,8 +193,8 @@ IF ( u >= 0.0 ) THEN
     !WRITE(*,100) 'u+',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
     bstart = istart
     bend = istart + spatialStencil -1
-    intstart = istart + spatialStencil
-    intend = iend
+!    intstart = istart + spatialStencil     !!!THESE ARE IF I USE BUFFERED SEND
+!    intend = iend
 ELSE IF ( u <= 0.0 ) THEN
     WRITE(*,*) 'Flux goes from right to left'
     senderproc = id +1 ! rank-1 sends info to this process
@@ -206,8 +207,8 @@ ELSE IF ( u <= 0.0 ) THEN
     !WRITE(*,100) 'u-',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
     bstart = iend - spatialStencil +1
     bend = iend
-    intstart = istart
-    intend = iend - spatialStencil
+!    intstart = istart                    !!!THESE ARE IF I USE BUFFERED SEND
+!    intend = iend - spatialStencil
 ELSE
     WRITE(*,*) 'Flux is neither positive nor negative. It is either zero or an error has ocurred'
     CALL MPI_FINALIZE(ierr)
@@ -216,8 +217,8 @@ END IF
 
 100 FORMAT(A3,A10,I3,A15,I4,A1,I4)
 
-!intstart = istart + spatialStencil
-!intend = iend - spatialStencil
+intstart = istart + spatialStencil
+intend = iend - spatialStencil
 
 !-----------------------------------------------------------
 !BLOCK IV:
@@ -268,24 +269,27 @@ DO
         CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr) !ojalá esto baste para que no se machaquen mensajes si el procesador se adelanta  &
         !y manda de nuevo otro bufer antes de que se haya computado el boundary del receptor
 
+        CALL SCHEME_POINTER(phi, dx, dt, u, sentbufferstart, sentbufferend,id, &
+        istart-spatialStencil, iend+spatialStencil,present,future)
+
     ELSE IF ( send ) THEN
         CALL MPI_ISEND(phi(sentbufferstart:sentbufferend,present),spatialStencil, &
         MPI_DOUBLE_PRECISION,receiverproc,0,MPI_COMM_WORLD,send_req,ierr)
         WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
         phi(sentbufferstart:sentbufferend,present),'iteration',iteration
         
-        IF (id == 0) THEN
-            CALL SCHEME_POINTER(phi, dx, dt, u, istart+1, iend-1,id, &
+        !IF (id == 0) THEN
+        CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
             istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
-            CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
-            WRITE(*,'(A5,I4,A22,I3)') 'Proc',id,'has waited receival',iteration
-            CALL SCHEME_POINTER(phi, dx, dt, u, iend,iend,id, &
+        CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
+        WRITE(*,'(A5,I4,A22,I3)') 'Proc',id,'has waited receival',iteration
+        CALL SCHEME_POINTER(phi, dx, dt, u, sentbufferstart,sentbufferend,id, &
             istart-spatialStencil,iend+spatialStencil,present,future)
-        ELSE IF (id == nprocs - 1) THEN
-            CALL SCHEME_POINTER(phi, dx, dt, u, istart, iend-1,id, &
-            istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
-            CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
-        END IF
+        !ELSE IF (id == nprocs - 1) THEN
+        !    CALL SCHEME_POINTER(phi, dx, dt, u, istart, iend-1,id, &
+        !    istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
+        !    CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
+        !END IF
     ELSE IF ( receive ) THEN
         !WRITE(*,010) 'Processor', id, 'receives'
         
@@ -293,7 +297,7 @@ DO
         MPI_DOUBLE_PRECISION,senderproc,0,MPI_COMM_WORLD,recv_req,ierr)
         
         CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
-        istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
+        istart-spatialStencil, iend+spatialStencil,present,future) !compute interior without computing last point
         
         CALL MPI_WAIT(recv_req,MPI_STATUS_IGNORE,ierr)
         
@@ -302,6 +306,7 @@ DO
         
         CALL SCHEME_POINTER(phi, dx, dt, u, bstart, bend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future)
+
     ELSE
         WRITE(*,'(A4,1X,I2,A50)') 'Proc',id,'reached a logical error sending or receiving info'
         CALL MPI_FINALIZE(ierr)
@@ -330,3 +335,6 @@ END PROGRAM parallel_linear_advection
 
 !no puedo modificar el sent bufer hasta que no esté explícitamente terminado. No vale la de llamar al scheme pointer solo una vez
 !el request identifica la operación iniciada por la nonblocking call. guarda el tag, el buffer, communicator, source and dest
+
+!!!!!!!!!PENDING REMINDERS!!!!!!!!
+!TAKING CARE THAT BC IS ALWAYS IMPOSED

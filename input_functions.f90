@@ -36,7 +36,7 @@ CONTAINS
         INTEGER, INTENT(IN) :: start, end, timeindex, fut, d1, d2,id
         INTEGER :: i
         REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2,0:fut) :: flux
-        REAL(KIND=8), INTENT(IN), DIMENSION(:) :: x_arr
+        REAL(KIND=8), INTENT(IN), DIMENSION(d1:d2) :: x_arr
         PROCEDURE(SGN),POINTER :: fn
         REAL(KIND=8), INTENT(IN) :: time, vel
         WRITE(*,'(I2,A20,2I2)') id, 'Has called analytical', d1,d2
@@ -47,5 +47,6 @@ CONTAINS
 
     END SUBROUTINE ANALYTICAL
 
+    !SUBROUTINE ERROR(flux,)
     !comment
 END MODULE input_functions
