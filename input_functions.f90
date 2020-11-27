@@ -63,10 +63,11 @@ CONTAINS
 
     END SUBROUTINE ANALYTICAL
 
-    SUBROUTINE ERROR(flux,start,end,fn,timeindex,x_arr,vel,time,d1,d2,fut,id,error_array)
+    SUBROUTINE ERROR(flux,start,end,fn,timeindex,x_arr,vel,time,d1,d2,fut,id,& 
+                    error_array,local_analytical)
         INTEGER, INTENT(IN) :: start, end, timeindex, fut, d1, d2,id
         INTEGER :: i
-        REAL(KIND=8), DIMENSION(d1:d2) :: local_analytical
+        REAL(KIND=8), INTENT(OUT), DIMENSION(d1:d2) :: local_analytical
         REAL(KIND=8), INTENT(OUT), DIMENSION(d1:d2) :: error_array
         REAL(KIND=8), INTENT(INOUT), DIMENSION(d1:d2) :: flux
         REAL(KIND=8), INTENT(IN), DIMENSION(d1:d2) :: x_arr
@@ -75,8 +76,19 @@ CONTAINS
         
         CALL ANALYTICAL(local_analytical,start,end,fn,timeindex, &
                         x_arr,vel,time,d1,d2,fut,id)
-        error_array(:) = local_analytical(:) - flux(:)
-        WRITE(*,'(6(A3,I2,F8.2))') ('err',i,error_array(i), i=start,end)
+        error_array = local_analytical - flux
+        WRITE(*,'(3(A5,F8.2,A3,I2,F8.2))') ('flux',flux(i),'err',i,error_array(i), i=start,end)
     END SUBROUTINE ERROR
+
+    SUBROUTINE NORMS(error_array,L1,L2,LINF)
+        REAL(KIND=8), INTENT(IN), DIMENSION(:) :: error_array
+        REAL(KIND=8), INTENT(OUT) :: L1,L2,LINF
+        
+        L1 = SUM(error_array)
+        L2 = DSQRT(SUM(error_array**2))
+        LINF = MAXVAL(error_array)
+    END SUBROUTINE NORMS
+
+
     !comment
 END MODULE input_functions
