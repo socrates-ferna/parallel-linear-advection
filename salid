@@ -1,0 +1,169 @@
+WARNING: release_mt library was used but no multi-ep feature was enabled. Please use release library instead.
+ MY SENDSIZE IS:           6 PROC           0
+ MY SENDSIZE IS:           5 PROC           1
+ MY SENDSIZE IS:           5 PROC           2
+ MY SENDSIZE IS:           4 PROC           3
+           6           5           5           4
+           0           6          11          16
+Processor 0  waiting for the barrier
+Processor 1  waiting for the barrier
+Processor 2  waiting for the barrier
+Processor 3  waiting for the barrier
+  0     INIT it time dt    0      0.00      4.21
+  1     INIT it time dt    0      0.00      4.21
+  3     INIT it time dt    0      0.00      4.21
+   3     Sent buffer index is  19  19   1.00 iteration  0
+   0     Sent buffer index is   5   5   0.00 iteration  0
+ Proc   0 has called upwind for indices   1   4
+  2     INIT it time dt    0      0.00      4.21
+     recvbuf is    0.00
+   0 Received buffer index is  -1  -1   0.00 iteration  0
+ Proc   0 has called upwind for indices   0   0
+ Proc   3 has called upwind for indices  17  18
+     recvbuf is    1.00
+ Proc   0 has called upwind for indices   5   5
+  0     INIT it time dt    1      4.21      4.21
+   0     Sent buffer index is   5   5   0.00 iteration  1
+ Proc   0 has called upwind for indices   1   4
+     recvbuf is    0.00
+   0 Received buffer index is  -1  -1   0.00 iteration  1
+   1     Sent buffer index is  10  10   1.00 iteration  0
+ Proc   1 has called upwind for indices   7   9
+   2     Sent buffer index is  15  15   1.00 iteration  0
+ Proc   2 has called upwind for indices  12  14
+   3 Received buffer index is  15  15   1.00 iteration  0
+ Proc   3 has called upwind for indices  16  16
+ Proc   3 has called upwind for indices  19  19
+  3     INIT it time dt    1      4.21      4.21
+   3     Sent buffer index is  19  19   1.00 iteration  1
+ Proc   3 has called upwind for indices  17  18
+ Proc   0 has called upwind for indices   0   0
+ Proc   0 has called upwind for indices   5   5
+  0     INIT it time dt    2      8.42      1.58
+   0     Sent buffer index is   5   5   0.00 iteration  2
+ Proc   0 has called upwind for indices   1   4
+     recvbuf is    0.00
+   0 Received buffer index is  -1  -1   0.00 iteration  2
+ Proc   0 has called upwind for indices   0   0
+ Proc   0 has called upwind for indices   5   5
+ Control point reached, writing...
+ flux  0.00err 0  0.00 flux  0.00err 1  0.00 flux  0.00err 2  0.00
+     recvbuf is    0.00
+   1 Received buffer index is   5   5   0.00 iteration  0
+ Proc   1 has called upwind for indices   6   6
+ Proc   1 has called upwind for indices  10  10
+ flux  0.00err 3  0.00 flux  0.00err 4  0.00 flux  0.00err 5  0.00
+ PROC           0 L1  0.000000000000000E+000 L2  0.000000000000000E+000 LINF
+  0.000000000000000E+000
+PROC:0istart 0  iend 5
+  0.0  0.0  0.0
+  0.0  0.0  0.0
+  1     INIT it time dt    1      4.21      4.21
+   1     Sent buffer index is  10  10   0.00 iteration  1
+ Proc   1 has called upwind for indices   7   9
+     recvbuf is    0.00
+     recvbuf is    1.00
+   2 Received buffer index is  10  10   1.00 iteration  0
+ Proc   2 has called upwind for indices  11  11
+ Proc   2 has called upwind for indices  15  15
+  2     INIT it time dt    1      4.21      4.21
+   2     Sent buffer index is  15  15   1.00 iteration  1
+ Proc   2 has called upwind for indices  12  14
+  0.0  0.0  0.0
+  0.0  0.0  0.0
+  0.0  0.0  0.0
+  0.0  0.0  0.0
+   1 Received buffer index is   5   5   0.00 iteration  1
+ Proc   1 has called upwind for indices   6   6
+ Proc   1 has called upwind for indices  10  10
+  1     INIT it time dt    2      8.42      1.58
+   1     Sent buffer index is  10  10   0.00 iteration  2
+ Proc   1 has called upwind for indices   7   9
+     recvbuf is    0.00
+   2 Received buffer index is  10  10   0.00 iteration  1
+ Proc   2 has called upwind for indices  11  11
+ Proc   2 has called upwind for indices  15  15
+  2     INIT it time dt    2      8.42      1.58
+     recvbuf is    1.00
+   3 Received buffer index is  15  15   1.00 iteration  1
+ Proc   3 has called upwind for indices  16  16
+ Proc   3 has called upwind for indices  19  19
+  3     INIT it time dt    2      8.42      1.58
+   3     Sent buffer index is  19  19   1.00 iteration  2
+ Proc   3 has called upwind for indices  17  18
+     recvbuf is    1.00
+     recvbuf is    0.00
+   1 Received buffer index is   5   5   0.00 iteration  2
+ Proc   1 has called upwind for indices   6   6
+ Proc   1 has called upwind for indices  10  10
+ Control point reached, writing...
+ flux  0.00err 6  0.00 flux  0.00err 7  0.00 flux  0.00err 8  0.00
+ flux  0.00err 9  0.00 flux  0.00err10  0.00
+   2     Sent buffer index is  15  15   1.00 iteration  2
+ Proc   2 has called upwind for indices  12  14
+     recvbuf is    0.00
+   2 Received buffer index is  10  10   0.00 iteration  2
+ Proc   2 has called upwind for indices  11  11
+   3 Received buffer index is  15  15   1.00 iteration  2
+ Proc   3 has called upwind for indices  16  16
+ Proc   3 has called upwind for indices  19  19
+ Control point reached, writing...
+ flux  1.00err16  0.00 flux  1.00err17  0.00 flux  1.00err18  0.00
+ flux  1.00err19  0.00
+ PROC           1 L1  0.000000000000000E+000 L2  0.000000000000000E+000 LINF
+  0.000000000000000E+000
+PROC:1istart 6  iend10
+  0.0  0.0  0.0
+  0.0  0.0  0.0
+ Proc   2 has called upwind for indices  15  15
+ Control point reached, writing...
+ flux  0.00err11  0.00 flux  0.62err12 -0.62 flux  1.00err13  0.00
+ flux  1.00err14  0.00 flux  1.00err15  0.00
+ PROC           3 L1  0.000000000000000E+000 L2  0.000000000000000E+000 LINF
+  0.000000000000000E+000
+PROC:3istart16  iend19
+  1.0  0.0  1.0
+  1.0  0.0  1.0
+  1.0  0.0  1.0
+  1.0  0.0  1.0
+  0.0  0.0  0.0
+  0.0  0.0  0.0
+  0.0  0.0  0.0
+ PROC           2 L1 -0.625000000000000      L2  0.625000000000000      LINF
+  0.625000000000000     
+PROC:2istart11  iend15
+  0.0  0.0  0.0
+  0.0 -0.6  0.6
+  1.0  0.0  1.0
+  1.0  0.0  1.0
+  1.0  0.0  1.0
+ Writing output files
+ L1=  0.000000000000000E+000 L2=  0.000000000000000E+000 LINF=
+  0.000000000000000E+000
+           0  0.000000000000000E+000           1  0.000000000000000E+000
+           2  0.000000000000000E+000           3  0.000000000000000E+000
+           4  0.000000000000000E+000           5  0.000000000000000E+000
+           6  0.000000000000000E+000           7  0.000000000000000E+000
+           8  0.000000000000000E+000           9  0.000000000000000E+000
+          10  0.000000000000000E+000          11  0.000000000000000E+000
+1  6    0.001  7    0.001  8    0.001  9    0.001 10    0.00
+2 11    0.002 12    0.622 13    1.002 14    1.002 15    1.00
+3 16    1.003 17    1.003 18    1.003 19    1.00
+          12  0.625000000000000               13   1.00000000000000     
+          14   1.00000000000000               15   1.00000000000000     
+          16   1.00000000000000               17   1.00000000000000     
+          18   1.00000000000000               19   1.00000000000000     
+ CFL_str:     1.0       
+ time_str:   10.00       
+ npoints_str:             20
+ i1           2 aux_str20             
+ aux_str posconcatA2             
+ format_str
+ (A7,A3,A1,A3,A1,F4.2,A1,A2,A1,F5.2,A1)                                         
+                                                                                
+                                                                                
+                                                                
+ aux_strA2             
+ HEADER WRITTEN WITHOUT ERRORS
+0  0    0.000  1    0.000  2    0.000  3    0.000  4    0.000  5    0.00
+

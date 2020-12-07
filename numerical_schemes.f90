@@ -85,6 +85,9 @@ IMPLICIT NONE
 
     END SUBROUTINE LAXWENDROFF
 
+    SUBROUTINE MACCORMACK(flux, spacing, tstep, vel, starti, endi, id, d1, d2,pres,fut)
+
+    END SUBROUTINE MACCORMACK
 
 
 END MODULE numerical_schemes

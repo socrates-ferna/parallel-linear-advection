@@ -1,5 +1,6 @@
 PROGRAM parallel_linear_advection
 USE MPI
+
 USE numerical_schemes, only: UPWIND, CENTRAL, LAX, LEAPFROG, LAXWENDROFF!, ANALYTICAL
 USE input_functions, only: SGN, EXPONENTIAL, LINEAR, ANALYTICAL, ERROR, NORMS
 !USE shared_declarations
@@ -9,8 +10,8 @@ USE input_functions, only: SGN, EXPONENTIAL, LINEAR, ANALYTICAL, ERROR, NORMS
 !
 ! Licence: This code is distributed under GNU GPL Licence
 ! Author: Sócrates Fernández Fernández, s(dot)fernaferna(at)gmail(dot)com
-!
-! LAST MOD: 27/11/2020
+! GitHub: socrates-ferna
+! LAST MOD: 7/12/2020
 !-----------------------------------------------------------------------
 ! BLOCK 0: DECLARATIONS AND MPI INIT
 !-----------------------------------------------------------
@@ -18,40 +19,28 @@ IMPLICIT NONE
 INTEGER :: stat(MPI_STATUS_SIZE), nprocs, id, ierr, send_req, recv_req, nbstat, position !parallel vars
 INTEGER :: i, j, npoints, nperproc, spatialStencil, timeStencil, istart, iend, iteration, &
              senderproc, receiverproc, sentbufferstart, sentbufferend, receivedbufferstart, &
-             receivedbufferend, past, present, future, sendsize,ncontrolTimes
-INTEGER :: bstart, bend, intstart,intend, status ! boundary (receive info form other proc) indices and interior indices
+             receivedbufferend, past, present, future, sendsize,ncontrolTimes, i1
+INTEGER :: bstart, bend, intstart,intend, status
 REAL(KIND=8) :: u, CFL, xl, xr, dx, dt, current_time,stopTime, L1, L2, LINF,&
-                L1_tot,L2_tot,LINF_overall !, recvbuf=0.0D0, sentbuf=53.0D0
-REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: controlTimes, x, error_array, receive_arr, x_tot, x_nodes,&  !we need the nodes array for writing the file into tecplot format
+                L1_tot,L2_tot,LINF_overall
+REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: controlTimes, x, error_array, receive_arr, x_tot, &
                                             analytical_res, recv_err_arr, recv_ana_arr
 INTEGER, DIMENSION(:), ALLOCATABLE :: displacements_arr, sendsizes_arr
 REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: phi
 LOGICAL :: send, receive, special_init
-CHARACTER(15) :: scheme, infunction
-CHARACTER(300) :: msg,pack_buf
+CHARACTER(15) :: scheme, infunction,CFL_str,time_str,npoints_str, aux_str, i1_str
+CHARACTER(300) :: msg,pack_buf,filename, format_str
 PROCEDURE(UPWIND), POINTER :: SCHEME_POINTER
 PROCEDURE(SGN), POINTER :: FUNCTION_POINTER
-!TYPE :: input_vector
-!    REAL(KIND=8) :: velocity
-!    CHARACTER(15) :: scheme_string
-!    CHARACTER(15) :: infunction_string
-!    REAL(KIND=8) :: Courant_number
-!    INTEGER :: mesh_size
-!    REAL(KIND=8) :: left_boundary
-!    REAL(KIND=8) :: right_boundary
-!    INTEGER :: n_control_times
-!    REAL(KIND=8) :: last_time
-!END TYPE input_vector
-!TYPE(input_vector) :: readinput
 
 
 CALL MPI_INIT(ierr)
 CALL MPI_COMM_SIZE(MPI_COMM_WORLD, nprocs, ierr)
 CALL MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr)
 
-!-----------------------------------------------------------
-!BLOCK I: INPUTS. WILL BE READ FROM A FILE IN LATER COMMITS
-!-----------------------------------------------------------
+!----------------------------------------------------------------!
+!BLOCK I: INPUTS. READ FROM A FILE, PACK & BCAST TO ALL PROCS    !
+!----------------------------------------------------------------!
 ALLOCATE(displacements_arr(0:nprocs-1))
 ALLOCATE(sendsizes_arr(0:nprocs-1))
 position=0
@@ -67,7 +56,7 @@ IF (id == 0) THEN
     READ(1,'(11X,A15)') infunction
     CALL MPI_PACK(infunction,15,MPI_CHARACTER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
 
-    READ(1,'(4X,F10.3)') CFL
+    READ(1,'(4X,F7.4)') CFL
     CALL MPI_PACK(CFL,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
 
     READ(1,'(8X,I6)') npoints
@@ -86,35 +75,35 @@ IF (id == 0) THEN
     CALL MPI_PACK(stopTime,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
 
     CLOSE(1)
-    WRITE(*,'(2X,F5.3)') u
-    WRITE(*,'(7X,A15)') scheme
-    WRITE(*,'(11X,A15)') infunction
-    WRITE(*,'(4X,F10.3)') CFL
-    WRITE(*,'(8X,I6)') npoints
-    WRITE(*,'(3X,F10.3)') xl
-    WRITE(*,'(3X,F10.3)') xr
-    WRITE(*,'(14X,I3)') ncontrolTimes
-    WRITE(*,'(9X,F10.3)') stopTime
+    !WRITE(*,'(2X,F5.3)') u
+    !WRITE(*,'(7X,A15)') scheme
+    !WRITE(*,'(11X,A15)') infunction
+    !WRITE(*,'(4X,F10.3)') CFL
+    !!WRITE(*,'(8X,I6)') npoints
+    !WRITE(*,'(3X,F10.3)') xl
+    !WRITE(*,'(3X,F10.3)') xr
+    !WRITE(*,'(14X,I3)') ncontrolTimes
+    !WRITE(*,'(9X,F10.3)') stopTime
 
     CALL MPI_BCAST(pack_buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
 ELSE
     CALL MPI_BCAST(pack_buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
     CALL MPI_UNPACK(pack_buf,300,position,u,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives u ',u
+    !WRITE(*,*) 'Proc',id,'receives u ',u
     CALL MPI_UNPACK(pack_buf,300,position,scheme,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives scheme ',scheme
+    !WRITE(*,*) 'Proc',id,'receives scheme ',scheme
     CALL MPI_UNPACK(pack_buf,300,position,infunction,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives infunction ',infunction
+    !WRITE(*,*) 'Proc',id,'receives infunction ',infunction
     CALL MPI_UNPACK(pack_buf,300,position,CFL,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives CFL ',CFL
+    !WRITE(*,*) 'Proc',id,'receives CFL ',CFL
     CALL MPI_UNPACK(pack_buf,300,position,npoints,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives npoints ',npoints
+    !WRITE(*,*) 'Proc',id,'receives npoints ',npoints
     CALL MPI_UNPACK(pack_buf,300,position,xl,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives xl ',xl
+    !WRITE(*,*) 'Proc',id,'receives xl ',xl
     CALL MPI_UNPACK(pack_buf,300,position,xr,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives xr ',xr
+    !WRITE(*,*) 'Proc',id,'receives xr ',xr
     CALL MPI_UNPACK(pack_buf,300,position,ncontrolTimes,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    WRITE(*,*) 'Proc',id,'receives ncontrolTimes',ncontrolTimes
+    !WRITE(*,*) 'Proc',id,'receives ncontrolTimes',ncontrolTimes
     CALL MPI_UNPACK(pack_buf,200,position,stopTime,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
 END IF
 
@@ -122,6 +111,7 @@ END IF
 
 
 ALLOCATE(controlTimes(0:ncontrolTimes));controlTimes(0)=0.0
+
 DO i=1,ncontrolTimes
     controlTimes(i)=stopTime/REAL(ncontrolTimes)*i
 END DO
@@ -133,20 +123,17 @@ j = 1
 !-----------------------------------------------------------
 !BLOCK I.I: AUXILIARY CALCULATIONS DUE TO INPUT
 !-----------------------------------------------------------
-!past = 0
-!present = 1
-!future = 2
 
-SELECT CASE (scheme) !remember to add the function in numerical_schemes.f90
-    CASE ('upwind')
-        spatialStencil = 1 !we will have to define a timeStencil and a spatialStencil in future versions (LeapFrog)
+SELECT CASE (scheme) 
+    CASE ('upw')
+        spatialStencil = 1 
         timeStencil = 1
         present = 0
         future = 1
         special_init = .FALSE.
-        SCHEME_POINTER => UPWIND !MODULE NOT WORKING
+        SCHEME_POINTER => UPWIND 
         !WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spatialStencil, timeStencil
-    CASE ('central')
+    CASE ('cnt')
         spatialStencil = 1
         timeStencil = 1
         present = 0
@@ -162,7 +149,7 @@ SELECT CASE (scheme) !remember to add the function in numerical_schemes.f90
         special_init = .FALSE.
         SCHEME_POINTER => LAX
         WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spatialStencil, timeStencil
-    CASE ('leapfrog')
+    CASE ('lpf')
         spatialStencil = 1
         timeStencil = 2
         past = 0
@@ -171,7 +158,7 @@ SELECT CASE (scheme) !remember to add the function in numerical_schemes.f90
         special_init = .TRUE.
         SCHEME_POINTER => LEAPFROG
         WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', spatialStencil, timeStencil
-    CASE ('lax-wendroff')
+    CASE ('lxw')
         spatialStencil = 1
         timeStencil = 1
         present = 0
@@ -179,28 +166,31 @@ SELECT CASE (scheme) !remember to add the function in numerical_schemes.f90
         special_init = .FALSE.
         SCHEME_POINTER => LAXWENDROFF
         WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spatialStencil, timeStencil
+    CASE ('mcc')
+        !!pending
+    !!! MACCORMACK AND TVD MISSING
 END SELECT
 
 
 SELECT CASE (infunction)
     CASE ('sgn')
         FUNCTION_POINTER => SGN
-    CASE ('exponential')
+    CASE ('exp')
         FUNCTION_POINTER => EXPONENTIAL
-    CASE ('linear')
+    CASE ('lin')
         FUNCTION_POINTER => LINEAR
 END SELECT
 
 
 
-dx = (xr - xl) / REAL(npoints-1) !a segment of npoints has npoints-1 interior intervals
-dt = CFL * dx / abs(u) ! CFL=u*dt/dx
-nperproc = npoints / nprocs !Number of points assigned to each proc before remainder
+dx = (xr - xl) / REAL(npoints-1) 
+dt = CFL * dx / abs(u) 
+nperproc = npoints / nprocs
 
 
-!-----------------------------------------------------------
-!BLOCK II: DOMAIN SPLITTING AND INITIALISATION
-!-----------------------------------------------------------
+!-----------------------------------------------------------!
+!BLOCK II: DOMAIN SPLITTING AND INITIALISATION              !
+!-----------------------------------------------------------!
 IF (id == 0) THEN
     IF (u > 0.0) THEN
         send=.TRUE.
@@ -212,7 +202,7 @@ IF (id == 0) THEN
     istart = 0
     iend = nperproc * (id + 1)
 
-    WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
+    !WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
 
 ELSE IF (id == nprocs -1 ) THEN
     IF (u < 0.0) THEN
@@ -224,13 +214,13 @@ ELSE IF (id == nprocs -1 ) THEN
     END IF
     istart = nperproc * id + 1
     iend = npoints - 1
-    WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
+    !WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
 ELSE
     send=.TRUE.
     receive=.TRUE.
     istart = nperproc * id + 1
     iend = nperproc * (id + 1)
-    WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
+    !WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
     
 END IF
 
@@ -244,19 +234,21 @@ ALLOCATE(x(istart-spatialStencil:iend+spatialStencil));x(:)=0
 ALLOCATE(phi(istart-spatialStencil:iend+spatialStencil, 0:timeStencil));phi(:,:)=0.0
 
 sendsize = SIZE(phi(istart:iend,present))
+!PRINT*, 'MY SENDSIZE IS:',sendsize,'PROC',id
 CALL MPI_GATHER(sendsize,1,MPI_INTEGER,sendsizes_arr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 IF(id == 0) THEN
     PRINT*,sendsizes_arr
-    ALLOCATE(x_nodes(0:npoints))
+    !ALLOCATE(x_nodes(0:npoints))
     ALLOCATE(x_tot(0:npoints-1))
     displacements_arr(0)=0
     DO i=1,nprocs-1
-        displacements_arr(i) = sendsizes_arr(i) + displacements_arr(i-1)
+        displacements_arr(i) = sendsizes_arr(i-1) + displacements_arr(i-1)
     END DO
-    DO i=0,npoints
-        x_nodes(i) = xl + (i-0.5D0)*dx
-    END DO
+    PRINT*, displacements_arr
+    !DO i=0,npoints
+    !    x_nodes(i) = xl + (i-0.5D0)*dx
+    !END DO
     DO i=0,npoints-1
         x_tot(i) = xl + i*dx
     END DO
@@ -264,7 +256,7 @@ END IF
 
 DO i= istart-spatialStencil, iend+spatialStencil !procs on domain limits will have "ghost elements"
     x(i) = xl + i*dx
-    WRITE(*,'(A2,I2,A2,F8.2,I10)') 'x(',i,')=',x(i), id
+    !WRITE(*,'(A2,I2,A2,F8.2,I10)') 'x(',i,')=',x(i), id
 END DO
 
 
@@ -354,80 +346,34 @@ call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
 DO 
     dt=min(dt,controlTimes(j)-current_time)
-    WRITE(*,005) id,'INIT it time dt', iteration, current_time, dt
+    !WRITE(*,005) id,'INIT it time dt', iteration, current_time, dt
 
-    !IF (send .and. receive) THEN 
-        CALL MPI_ISEND(phi(sentbufferstart:sentbufferend,present),spatialStencil, &
+    CALL MPI_ISEND(phi(sentbufferstart:sentbufferend,present),spatialStencil, &
         MPI_DOUBLE_PRECISION,receiverproc,0,MPI_COMM_WORLD,send_req,ierr)
-        WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
-        phi(sentbufferstart:sentbufferend,present),'iteration',iteration
 
-        !WRITE(*,010) 'Processor', id, 'receives'
+    !WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
+        !!phi(sentbufferstart:sentbufferend,present),'iteration',iteration
         
-        CALL MPI_IRECV(phi(receivedbufferstart:receivedbufferend,present),spatialStencil, &
+    CALL MPI_IRECV(phi(receivedbufferstart:receivedbufferend,present),spatialStencil, &
         MPI_DOUBLE_PRECISION,senderproc,0,MPI_COMM_WORLD,recv_req,ierr)
         
-
-        CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
+    CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
         
-        CALL MPI_WAIT(recv_req,MPI_STATUS_IGNORE,ierr)
-        WRITE(*,'(A15,F8.2)') 'recvbuf is', phi(receivedbufferstart:receivedbufferend,present)
-        !phi(receivedbufferstart:receivedbufferend,present)=recvbuf
+    CALL MPI_WAIT(recv_req,MPI_STATUS_IGNORE,ierr)
+
+    !WRITE(*,'(A15,F8.2)') 'recvbuf is', phi(receivedbufferstart:receivedbufferend,present)
         
-        !WRITE(*,*) 'Proc',id,'recv_req:',recv_req,'after receiving'
-        WRITE(*,020) id, 'Received buffer index is',receivedbufferstart,receivedbufferend, & 
-        phi(receivedbufferstart:receivedbufferend,present),'iteration',iteration
+    !WRITE(*,020) id, 'Received buffer index is',receivedbufferstart,receivedbufferend, & 
+        !!phi(receivedbufferstart:receivedbufferend,present),'iteration',iteration
         
-        CALL SCHEME_POINTER(phi, dx, dt, u, bstart, bend,id, &
+    CALL SCHEME_POINTER(phi, dx, dt, u, bstart, bend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future)
 
-        CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr) !ojalá esto baste para que no se machaquen mensajes si el procesador se adelanta  &
-        !y manda de nuevo otro bufer antes de que se haya computado el boundary del receptor
+    CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
 
-        CALL SCHEME_POINTER(phi, dx, dt, u, sentbufferstart, sentbufferend,id, &
+    CALL SCHEME_POINTER(phi, dx, dt, u, sentbufferstart, sentbufferend,id, &
         istart-spatialStencil, iend+spatialStencil,present,future)
-
-    !ELSE IF ( send ) THEN
-    !    CALL MPI_ISEND(phi(sentbufferstart:sentbufferend,present),spatialStencil, &
-    !    MPI_DOUBLE_PRECISION,receiverproc,0,MPI_COMM_WORLD,send_req,ierr)
-    !    WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
-    !    phi(sentbufferstart:sentbufferend,present),'iteration',iteration
-        
-        !!!!!!IF (id == 0) THEN
-    !    CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
-    !        istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
-    !    CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
-    !    WRITE(*,'(A5,I4,A22,I3)') 'Proc',id,'has waited receival',iteration
-    !    CALL SCHEME_POINTER(phi, dx, dt, u, sentbufferstart,sentbufferend,id, &
-    !        istart-spatialStencil,iend+spatialStencil,present,future)
-        !!!!!ELSE IF (id == nprocs - 1) THEN
-        !!!!    CALL SCHEME_POINTER(phi, dx, dt, u, istart, iend-1,id, &
-        !!!!    istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
-        !!!!    CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
-        !END IF
-    !ELSE IF ( receive ) THEN
-    !!!!!!    !WRITE(*,010) 'Processor', id, 'receives'
-    !    
-    !    CALL MPI_IRECV(phi(receivedbufferstart:receivedbufferend,present),spatialStencil, &
-    !    MPI_DOUBLE_PRECISION,senderproc,0,MPI_COMM_WORLD,recv_req,ierr)
-    !    
-    !    CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
-    !    istart-spatialStencil, iend+spatialStencil,present,future) !compute interior without computing last point
-    !    
-    !    CALL MPI_WAIT(recv_req,MPI_STATUS_IGNORE,ierr)
-    !    
-    !    WRITE(*,020) id, 'Received buffer index is',receivedbufferstart, receivedbufferend, & 
-    !    phi(receivedbufferstart:receivedbufferend,present),'iteration',iteration
-    !    
-    !    CALL SCHEME_POINTER(phi, dx, dt, u, bstart, bend,id, &
-    !    istart-spatialStencil, iend+spatialStencil,present,future)
-!
-    !ELSE
-    !    WRITE(*,'(A4,1X,I2,A50)') 'Proc',id,'reached a logical error sending or receiving info'
-    !    CALL MPI_FINALIZE(ierr)
-    !    STOP
-    !END IF
 
     phi(:,present)=phi(:,future)
     iteration = iteration + 1;
@@ -435,26 +381,31 @@ DO
     
     IF (current_time >= controlTimes(j) )THEN
         j = j+1
-        WRITE(*,*) 'Control point reached, writing...'
-        ALLOCATE(error_array(istart:iend));error_array(:)=-100.0D0
-        ALLOCATE(analytical_res(istart:iend));analytical_res(:)= 23.0D0
+        !WRITE(*,*) 'Control point reached, writing...'
+        ALLOCATE(error_array(istart:iend));error_array(:)= 3.0D0
+        ALLOCATE(analytical_res(istart:iend));analytical_res(:)= 8.0D0
         CALL ERROR(phi(istart:iend,present), &
                 istart,iend,FUNCTION_POINTER, &
                 present, x, u, current_time, & 
                 istart,iend,future,id,error_array,analytical_res)
+        
         CALL NORMS(error_array,L1,L2,LINF)
-
+        PRINT*,'PROC',id,'L1',L1,'L2',L2,'LINF',LINF
+        WRITE(*,'(A5,I1,2(A6,I2), /,3(F5.1))') 'PROC:',id,'istart',istart, 'iend', iend,&
+             (analytical_res(i),error_array(i),phi(i,present), i=istart,iend)
         IF (id == 0) THEN
             ALLOCATE(receive_arr(0:npoints-1))
-	    ALLOCATE(recv_err_arr(0:npoints-1))
-	    ALLOCATE(recv_ana_arr(0:npoints-1))
+	        ALLOCATE(recv_err_arr(0:npoints-1))
+	        ALLOCATE(recv_ana_arr(0:npoints-1))
         END IF
         CALL MPI_GATHERV(analytical_res(istart:iend),sendsize,MPI_DOUBLE_PRECISION, & 
         recv_ana_arr, sendsizes_arr, displacements_arr,MPI_DOUBLE_PRECISION,& 
         0,MPI_COMM_WORLD,ierr)
+
         CALL MPI_GATHERV(phi(istart:iend,present),sendsize,MPI_DOUBLE_PRECISION, & 
         receive_arr, sendsizes_arr, displacements_arr,MPI_DOUBLE_PRECISION,& 
         0,MPI_COMM_WORLD,ierr)
+
         CALL MPI_GATHERV(error_array(istart:iend),sendsize,MPI_DOUBLE_PRECISION, & 
         recv_err_arr, sendsizes_arr, displacements_arr,MPI_DOUBLE_PRECISION,& 
         0,MPI_COMM_WORLD,ierr)
@@ -466,26 +417,48 @@ DO
         IF (id == 0) THEN
 
             WRITE(*,*) 'Writing output files'
-            WRITE(*,*) 'L1=', L1,'L2=',L2,'LINF=',LINF
+            WRITE(*,*) 'L1=', L1,'L2=',L2,'LINF=',LINF_overall
             WRITE(*,*) (i, receive_arr(i), i=0,npoints-1)
+            WRITE(CFL_str,'(F8.1)') CFL
+            print*, 'CFL_str:', CFL_str
+            WRITE(time_str,'(F8.2)') current_time
+            print*, 'time_str:',time_str
+ 
+            WRITE(npoints_str,'(I15)') npoints
+            print*, 'npoints_str:', npoints_str
+
+            filename = TRIM(infunction) // '_' // TRIM(scheme) // '_' // TRIM(ADJUSTL(CFL_str)) // '_'&
+             //  TRIM(ADJUSTL(npoints_str)) // '_' // TRIM(ADJUSTL(time_str)) // '.dat'
             
-            OPEN(UNIT=100,FILE='result.dat',STATUS='old',ACTION='WRITE', IOSTAT=status,IOMSG=msg) !pending to vary the name
-            
-            222 FORMAT(A6,A3,A1,A3,A1,F4.2,A1,I3,A1,F4.2,A1) !!!YOU NEED TO GET THE NUMBER OF DIGITS OF NPOINTS INTEGER
-            WRITE(100,222) 'TITLE="', infunction, '_', scheme, '_',  CFL, '_',  npoints,'_',current_time, '"'
-            WRITE(100,*) 'VARIABLES = "x-nodes", "x-centres", "Analytical", "Numerical", "Error"'
+            OPEN(UNIT=100,FILE=filename,STATUS='NEW',ACTION='WRITE', IOSTAT=status,IOMSG=msg)
+
+            WRITE(aux_str,'(A15)') npoints_str
+            aux_str=ADJUSTL(aux_str)
+            i1 = index(aux_str,' ') - 1
+            WRITE(i1_str,*) i1
+            print*,'i1', i1, 'aux_str', aux_str
+            aux_str= "A" // TRIM(ADJUSTL(i1_str))
+            print*, 'aux_str posconcat', aux_str
+
+            format_str = "(A7,A3,A1,A3,A1,F4.2,A1," // aux_str(1:i1) // ",A1,F5.2,A1)"
+            format_str = TRIM(format_str)
+            print*, 'format_str', format_str
+            print*, 'aux_str', aux_str
+            WRITE(100,format_str) 'TITLE="', infunction, '_', scheme, '_',  CFL, '_', &
+                                  TRIM(ADJUSTL(npoints_str)),'_',current_time, '"'
+            WRITE(100,*) 'VARIABLES = "x-nodes", "Analytical", "Numerical", "Error"'
             WRITE(100,*) 'ZONE'
-            WRITE(100,222) 'T=   "', infunction, '_', scheme, '_',  CFL, '_',  npoints, '"'
+            WRITE(100,format_str) 'T=   "', infunction, '_', scheme, '_',  CFL, '_', &
+                                 TRIM(ADJUSTL(npoints_str)), '"'
+            PRINT*, 'HEADER WRITTEN WITHOUT ERRORS'
+
+            npoints_str= TRIM(ADJUSTL(npoints_str))
+            format_str= "(A2," // aux_str(1:i1) // ",A20)"
+            WRITE(100,format_str) 'I=', npoints_str, ', DATAPACKING=POINT'
             
-            333 FORMAT('I=',I3,', DATAPACKING=BLOCK, VARLOCATION=([2,3,4]=CELLCENTERED)')
-            WRITE(100,333) npoints+1
-            
-            444 FORMAT(101(E13.6))
-            WRITE(100,444) (x_nodes(i), i=0,npoints)
-            WRITE(100,444) (x_tot(i), i=0,npoints-1)
-            WRITE(100,444) (recv_ana_arr(i), i=0,npoints-1)
-            WRITE(100,444) (receive_arr(i), i=0,npoints-1)
-            WRITE(100,444) (recv_err_arr(i), i=0,npoints-1)
+            444 FORMAT(4(ES14.7,1X))
+
+            WRITE(100,444) (x_tot(i),recv_ana_arr(i), receive_arr(i), recv_err_arr(i), i = 0,npoints-1)
 
             CLOSE(100)
         END IF
@@ -496,11 +469,25 @@ END DO
 
 
 !DO i=istart,iend
-WRITE(*,121) (i, phi(i,present), i=istart,iend)
-121 FORMAT(6(I5,F10.2),/)
+WRITE(*,121) (id,i, phi(i,present), i=istart,iend)
+121 FORMAT(6(I3,I3,F8.2),/)
 !END DO
 
 CALL MPI_FINALIZE(ierr)
 END PROGRAM parallel_linear_advection
 
 !!PENDING TO DEFINE NEW MPI DATATYPE AND DO THE ISEND/IRECV USING IT. IF YOU DON'T THEN THE SPATIALST LARGER THAN 1 WILL NOT BE SENT
+
+!------------------!
+!     PENDING      !
+!------------------!
+
+!-ordenar los allocate y comentar los significados de las cosas mínimamente
+!-pasar los case select a un módulo misc_subroutines.f90
+!-Cambiar lso nombres de los esquemas a tres letras
+!-simplificar los nombres de las variables? Quizás pon un mensaje en el foro
+!-implementar el Maccormack y el TVD
+!-sacar el write del time loop añadiendo las columnas necesarias a los arrays de resultado y haciéndolo todo fuera
+!-archivo de salida con el informe en tiempo de las normas, mira a ver si lo haces tecplot-readable
+!-hacer una opción de escupir un paraview-readable (un csv con los títulos de las variables y todo escupido por columnas)
+!-limpiar de variables sobrantes tipo x_nodes (que ya la has quitado)
