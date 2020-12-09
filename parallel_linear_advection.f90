@@ -16,17 +16,17 @@ USE input_functions, only: SGN, EXPONENTIAL, LINEAR, ANALYTICAL, ERROR, NORMS
 ! BLOCK 0: DECLARATIONS AND MPI INIT
 !-----------------------------------------------------------
 IMPLICIT NONE
-INTEGER :: stat(MPI_STATUS_SIZE), nprocs, id, ierr, send_req, recv_req, nbstat, position !parallel vars
-INTEGER :: i, j, npoints, nperproc, spatialStencil, timeStencil, istart, iend, iteration, &
-             senderproc, receiverproc, sentbufferstart, sentbufferend, receivedbufferstart, &
-             receivedbufferend, past, present, future, sendsize,ncontrolTimes, i1
+INTEGER :: stat(MPI_STATUS_SIZE), commsize, id, ierr, send_req, recv_req, nbstat, position, reqs(4) !parallel vars
+INTEGER :: i, j, npoints, nperproc, sst, tst, istart, iend, iteration, &
+             pp, np, imsbs, imsbe, imrbs,ipsbs, ipsbe, iprbs, iprbe, &
+             imrbe, past, present, future, sendsize,ncontrolTimes, i1
 INTEGER :: bstart, bend, intstart,intend, status
-REAL(KIND=8) :: u, CFL, xl, xr, dx, dt, current_time,stopTime, L1, L2, LINF,&
-                L1_tot,L2_tot,LINF_overall
-REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: controlTimes, x, error_array, receive_arr, x_tot, &
-                                            analytical_res, recv_err_arr, recv_ana_arr
-INTEGER, DIMENSION(:), ALLOCATABLE :: displacements_arr, sendsizes_arr
-REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: phi
+REAL(KIND=8) :: u, CFL, xl, xr, dx, dt, currentTime,stopTime
+                
+REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: controlTimes, x,  x_tot, L1_tot,L2_tot,LINF_overall, L1, L2, LINF
+                                            
+INTEGER, DIMENSION(:), ALLOCATABLE :: displacements, ssizes
+REAL(KIND=8), DIMENSION(:,:), ALLOCATABLE :: phi, error_array, analytical_res, receive_arr, r_err, r_ana, saved_results
 LOGICAL :: send, receive, special_init
 CHARACTER(15) :: scheme, infunction,CFL_str,time_str,npoints_str, aux_str, i1_str
 CHARACTER(300) :: msg,pack_buf,filename, format_str
@@ -35,14 +35,18 @@ PROCEDURE(SGN), POINTER :: FUNCTION_POINTER
 
 
 CALL MPI_INIT(ierr)
-CALL MPI_COMM_SIZE(MPI_COMM_WORLD, nprocs, ierr)
+CALL MPI_COMM_SIZE(MPI_COMM_WORLD, commsize, ierr)
 CALL MPI_COMM_RANK(MPI_COMM_WORLD, id, ierr)
+
+
+001 FORMAT(3(A7,I5))
+002 FORMAT(A2,I2,2(A10,F8.3))
 
 !----------------------------------------------------------------!
 !BLOCK I: INPUTS. READ FROM A FILE, PACK & BCAST TO ALL PROCS    !
 !----------------------------------------------------------------!
-ALLOCATE(displacements_arr(0:nprocs-1))
-ALLOCATE(sendsizes_arr(0:nprocs-1))
+ALLOCATE(displacements(0:commsize-1))
+ALLOCATE(ssizes(0:commsize-1))
 position=0
 
 IF (id == 0) THEN
@@ -116,7 +120,7 @@ DO i=1,ncontrolTimes
     controlTimes(i)=stopTime/REAL(ncontrolTimes)*i
 END DO
 
-current_time = controlTimes(0)
+currentTime = controlTimes(0)
 iteration = 0
 j = 1
 
@@ -126,47 +130,52 @@ j = 1
 
 SELECT CASE (scheme) 
     CASE ('upw')
-        spatialStencil = 1 
-        timeStencil = 1
+        sst = 1 
+        tst = 1
         present = 0
         future = 1
         special_init = .FALSE.
         SCHEME_POINTER => UPWIND 
-        !WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spatialStencil, timeStencil
+        !WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', sst, tst
     CASE ('cnt')
-        spatialStencil = 1
-        timeStencil = 1
+        sst = 1
+        tst = 1
         present = 0
         future = 1
         special_init = .FALSE.
         SCHEME_POINTER => CENTRAL
-        WRITE(*,*) 'Chosen scheme is central, stencilSize=', spatialStencil, timeStencil
+        WRITE(*,*) 'Chosen scheme is central, stencilSize=', sst, tst
     CASE ('lax')
-        spatialStencil = 1
-        timeStencil = 1
+        sst = 1
+        tst = 1
         present = 0
         future = 1
         special_init = .FALSE.
         SCHEME_POINTER => LAX
-        WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spatialStencil, timeStencil
+        WRITE(*,*) 'Chosen scheme is lax, stencilSize=', sst, tst
     CASE ('lpf')
-        spatialStencil = 1
-        timeStencil = 2
+        sst = 1
+        tst = 2
         past = 0
         present = 1
         future = 2
         special_init = .TRUE.
         SCHEME_POINTER => LEAPFROG
-        WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', spatialStencil, timeStencil
+        WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', sst, tst
     CASE ('lxw')
-        spatialStencil = 1
-        timeStencil = 1
+        sst = 1
+        tst = 1
         present = 0
         future = 1
         special_init = .FALSE.
         SCHEME_POINTER => LAXWENDROFF
-        WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spatialStencil, timeStencil
+        WRITE(*,*) 'Chosen scheme is lax, stencilSize=', sst, tst
     CASE ('mcc')
+        sst = 1
+        tst = 1
+        present = 0
+        future = 1
+        WRITE(*,*) 'Chosen scheme is MacCormack'
         !!pending
     !!! MACCORMACK AND TVD MISSING
 END SELECT
@@ -185,39 +194,40 @@ END SELECT
 
 dx = (xr - xl) / REAL(npoints-1) 
 dt = CFL * dx / abs(u) 
-nperproc = npoints / nprocs
+nperproc = npoints / commsize
 
 
 !-----------------------------------------------------------!
 !BLOCK II: DOMAIN SPLITTING AND INITIALISATION              !
 !-----------------------------------------------------------!
+
 IF (id == 0) THEN
-    IF (u > 0.0) THEN
-        send=.TRUE.
-        receive=.FALSE.
-    ELSE IF (u < 0.0) THEN
-        send=.FALSE.
-        receive=.TRUE.
-    END IF
+!    IF (u > 0.0) THEN
+!        send=.TRUE.
+!        receive=.FALSE.
+!    ELSE IF (u < 0.0) THEN
+!        send=.FALSE.
+!        receive=.TRUE.
+!    END IF
     istart = 0
     iend = nperproc * (id + 1)
 
     !WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
 
-ELSE IF (id == nprocs -1 ) THEN
-    IF (u < 0.0) THEN
-        send=.TRUE.
-        receive=.FALSE.
-    ELSE IF (u > 0.0) THEN
-        send=.FALSE.
-        receive=.TRUE.
-    END IF
+ELSE IF (id == commsize -1 ) THEN
+!    IF (u < 0.0) THEN
+!        send=.TRUE.
+!        receive=.FALSE.
+!    ELSE IF (u > 0.0) THEN
+!        send=.FALSE.
+ !       receive=.TRUE.
+ !   END IF
     istart = nperproc * id + 1
     iend = npoints - 1
     !WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
 ELSE
-    send=.TRUE.
-    receive=.TRUE.
+!    send=.TRUE.
+!    receive=.TRUE.
     istart = nperproc * id + 1
     iend = nperproc * (id + 1)
     !WRITE(*,001) 'RANK:', id, 'istart=', istart, 'iend=', iend
@@ -226,26 +236,25 @@ END IF
 
 
 
-001 FORMAT(3(A7,I5))
-002 FORMAT(A2,I2,2(A10,F8.3))
 
 
-ALLOCATE(x(istart-spatialStencil:iend+spatialStencil));x(:)=0
-ALLOCATE(phi(istart-spatialStencil:iend+spatialStencil, 0:timeStencil));phi(:,:)=0.0
+
+ALLOCATE(x(istart-sst:iend+sst));x(:)=0
+ALLOCATE(phi(istart-sst:iend+sst, 0:tst));phi(:,:)=0.0
 
 sendsize = SIZE(phi(istart:iend,present))
 !PRINT*, 'MY SENDSIZE IS:',sendsize,'PROC',id
-CALL MPI_GATHER(sendsize,1,MPI_INTEGER,sendsizes_arr,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+CALL MPI_GATHER(sendsize,1,MPI_INTEGER,ssizes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 IF(id == 0) THEN
-    PRINT*,sendsizes_arr
+    PRINT*,ssizes
     !ALLOCATE(x_nodes(0:npoints))
     ALLOCATE(x_tot(0:npoints-1))
-    displacements_arr(0)=0
-    DO i=1,nprocs-1
-        displacements_arr(i) = sendsizes_arr(i-1) + displacements_arr(i-1)
+    displacements(0)=0
+    DO i=1,commsize-1
+        displacements(i) = ssizes(i-1) + displacements(i-1)
     END DO
-    PRINT*, displacements_arr
+    PRINT*, displacements
     !DO i=0,npoints
     !    x_nodes(i) = xl + (i-0.5D0)*dx
     !END DO
@@ -254,74 +263,77 @@ IF(id == 0) THEN
     END DO
 END IF
 
-DO i= istart-spatialStencil, iend+spatialStencil !procs on domain limits will have "ghost elements"
+DO i= istart-sst, iend+sst !procs on domain limits will have "ghost elements"
     x(i) = xl + i*dx
     !WRITE(*,'(A2,I2,A2,F8.2,I10)') 'x(',i,')=',x(i), id
 END DO
 
 
 
-CALL ANALYTICAL(phi(istart-spatialStencil:istart+spatialStencil,present), &
-                istart-spatialStencil,iend+spatialStencil,FUNCTION_POINTER, &
-                present, x, u, current_time, & 
-                istart-spatialStencil,iend+spatialStencil,future,id)
-CALL ANALYTICAL(phi(istart-spatialStencil:istart+spatialStencil,future), &
-                istart-spatialStencil,iend+spatialStencil,FUNCTION_POINTER, &
-                present, x, u, current_time, & 
-                istart-spatialStencil,iend+spatialStencil,future,id)
+CALL ANALYTICAL(phi(istart-sst:istart+sst,present), istart-sst,iend+sst,FUNCTION_POINTER, &
+                present, x, u, currentTime, istart-sst,iend+sst,future,id)
+CALL ANALYTICAL(phi(istart-sst:istart+sst,future), istart-sst,iend+sst,FUNCTION_POINTER, &
+                present, x, u, currentTime, istart-sst,iend+sst,future,id)
 
 
-!CALL A WRITING SUBROUTINE HERE
 
 !-----------------------------------------------------------
 !BLOCK III: FLUX DETERMINATION AND BOUNDARY EXCHANGE SETUP
 !-----------------------------------------------------------
 IF ( u >= 0.0 ) THEN
     IF(id == 0) THEN
-        senderproc = MPI_PROC_NULL !THIS WAY there are no IF's inside the time loop to distinguish processors
-        receiverproc = id +1
-        IF(nprocs == 1) receiverproc=MPI_PROC_NULL
-    ELSE IF(id == nprocs - 1) THEN
-        senderproc = id - 1
-        receiverproc = MPI_PROC_NULL
+        pp = MPI_PROC_NULL !THIS WAY there are no IF's inside the time loop to distinguish processors
+        np = id +1
+        IF(commsize == 1) np= MPI_PROC_NULL
+    ELSE IF(id == commsize - 1) THEN
+        pp = id - 1
+        np = MPI_PROC_NULL
     ELSE
-        senderproc = id - 1 ! rank-1 sends info to this process
-        receiverproc = id + 1 ! this process sends info to receiverproc
+        pp = id - 1 ! rank-1 sends info to this process
+        np = id + 1 ! this process sends info to np
     END IF
     
-    sentbufferstart = iend - spatialStencil + 1
-    sentbufferend = iend
-    receivedbufferstart = istart - spatialStencil
-    receivedbufferend = istart - 1
-    !WRITE(*,100) 'u+',' Processor',id,'sends indices',sentbufferstart,':',sentbufferend
-    !WRITE(*,100) 'u+',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
+    imsbs = iend - sst + 1    ! i-1 sent buffer start index
+    imsbe = iend              ! i-1 sent buffer end index
+    imrbs = istart - sst      ! i-1 received buffer start index
+    imrbe = istart - 1        ! i-1 received buffer end index
+
+    ipsbs = istart            ! i+1 sent buffer start index
+    ipsbe = istart + sst - 1  ! i+1 sent buffer end index
+    iprbs = iend + 1          ! i+1 received buffer start index
+    iprbe = iend + sst        ! i+1 received buffer end index
+
+    !WRITE(*,100) 'u+',' Processor',id,'sends indices',imsbs,':',imsbe
+    !WRITE(*,100) 'u+',' Processor',id,'recvs indices',imrbs,':',imrbe
+    
     bstart = istart
-    bend = istart + spatialStencil -1
-!    intstart = istart + spatialStencil     !!!THESE ARE IF I USE BUFFERED SEND
+    bend = istart + sst -1
+
+!    intstart = istart + sst     !!!THESE ARE IF I USE BUFFERED SEND
 !    intend = iend
 ELSE IF ( u <= 0.0 ) THEN
     IF(id == 0) THEN
-        receiverproc = MPI_PROC_NULL
-        senderproc = id +1
-    ELSE IF(id == nprocs - 1) THEN
-        receiverproc = id - 1
-        senderproc = MPI_PROC_NULL
+        np = MPI_PROC_NULL
+        pp = id +1
+    ELSE IF(id == commsize - 1) THEN
+        np = id - 1
+        pp = MPI_PROC_NULL
     ELSE
-        senderproc = id + 1 ! rank-1 sends info to this process
-        receiverproc = id - 1 ! this process sends info to receiverproc
+        pp = id + 1 ! rank-1 sends info to this process
+        np = id - 1 ! this process sends info to np
     END IF
     
     WRITE(*,*) 'Flux goes from right to left'
-    sentbufferstart = istart
-    sentbufferend = istart + spatialStencil - 1
-    receivedbufferstart = iend + spatialStencil
-    receivedbufferend = iend + 1
-    !WRITE(*,100) 'u-',' Processor',id,'sends indices',sentbufferstart,':',sentbufferend
-    !WRITE(*,100) 'u-',' Processor',id,'recvs indices',receivedbufferstart,':',receivedbufferend
-    bstart = iend - spatialStencil +1
+    imsbs = istart
+    imsbe = istart + sst - 1
+    imrbs = iend + sst
+    imrbe = iend + 1
+    !WRITE(*,100) 'u-',' Processor',id,'sends indices',imsbs,':',imsbe
+    !WRITE(*,100) 'u-',' Processor',id,'recvs indices',imrbs,':',imrbe
+    bstart = iend - sst +1
     bend = iend
 !    intstart = istart                    !!!THESE ARE IF I USE BUFFERED SEND
-!    intend = iend - spatialStencil
+!    intend = iend - sst
 ELSE
     WRITE(*,*) 'Flux is neither positive nor negative. It is either zero or an error has ocurred'
     CALL MPI_FINALIZE(ierr)
@@ -330,8 +342,8 @@ END IF
 
 100 FORMAT(A3,A10,I3,A15,I4,A1,I4)
 
-intstart = istart + spatialStencil
-intend = iend - spatialStencil
+intstart = istart + sst
+intend = iend - sst
 
 !-----------------------------------------------------------
 !BLOCK IV: SIMULATION EXECUTION
@@ -342,136 +354,308 @@ intend = iend - spatialStencil
 
 
 WRITE(*,010) 'Processor',id,'waiting for the barrier'
+
+ALLOCATE(error_array(istart:iend,ncontrolTimes));error_array(:,:) = 3.0D0 !! ALLOCATIONS HAVE "RANDOM" VALUES TO HELP FINDING BUGS
+ALLOCATE(analytical_res(istart:iend,ncontrolTimes));analytical_res(:,:) = 8.0D0
+ALLOCATE(L1(ncontrolTimes));L1(:) = 5.0D0
+ALLOCATE(L2(ncontrolTimes));L2(:) = 6.0D0
+ALLOCATE(LINF(ncontrolTimes));LINF(:) = 70.D0
+ALLOCATE(saved_results(istart:iend,ncontrolTimes)); saved_results(:,:) = 211.0D0
 call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 
+
+
+SELECT CASE (scheme)
+    CASE('upw')
+        GOTO 500
+    CASE('mcc')
+        GOTO 510
+    CASE DEFAULT
+        GOTO 505
+END SELECT
+
+
+500 CONTINUE !!UPWIND TIME LOOP STRUCTURE. COMMUNICATION ONLY TO GET THE "I-1" GRID POINT
+!SENDS ARE ONLY DOWNSTREAM
+!RECEIVES ARE ONLY UPSTREAM
 DO 
-    dt=min(dt,controlTimes(j)-current_time)
-    !WRITE(*,005) id,'INIT it time dt', iteration, current_time, dt
+    dt=min(dt,controlTimes(j)-currentTime)
+    !WRITE(*,005) id,'INIT it time dt', iteration, currentTime, dt
 
-    CALL MPI_ISEND(phi(sentbufferstart:sentbufferend,present),spatialStencil, &
-        MPI_DOUBLE_PRECISION,receiverproc,0,MPI_COMM_WORLD,send_req,ierr)
+    CALL MPI_ISEND(phi(imsbs:imsbe,present),sst, &
+        MPI_DOUBLE_PRECISION,np,0,MPI_COMM_WORLD,send_req,ierr)
 
-    !WRITE(*,020) id, 'Sent buffer index is',sentbufferstart,sentbufferend, & 
-        !!phi(sentbufferstart:sentbufferend,present),'iteration',iteration
+    !WRITE(*,020) id, 'Sent buffer index is',imsbs,imsbe, & 
+        !!phi(imsbs:imsbe,present),'iteration',iteration
         
-    CALL MPI_IRECV(phi(receivedbufferstart:receivedbufferend,present),spatialStencil, &
-        MPI_DOUBLE_PRECISION,senderproc,0,MPI_COMM_WORLD,recv_req,ierr)
+    CALL MPI_IRECV(phi(imrbs:imrbe,present),sst, &
+        MPI_DOUBLE_PRECISION,pp,0,MPI_COMM_WORLD,recv_req,ierr)
         
     CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, &
-        istart-spatialStencil, iend+spatialStencil,present,future) !compute interior
+        istart-sst, iend+sst,present,future) !compute interior
         
     CALL MPI_WAIT(recv_req,MPI_STATUS_IGNORE,ierr)
 
-    !WRITE(*,'(A15,F8.2)') 'recvbuf is', phi(receivedbufferstart:receivedbufferend,present)
+    !WRITE(*,'(A15,F8.2)') 'recvbuf is', phi(imrbs:imrbe,present)
         
-    !WRITE(*,020) id, 'Received buffer index is',receivedbufferstart,receivedbufferend, & 
-        !!phi(receivedbufferstart:receivedbufferend,present),'iteration',iteration
+    !WRITE(*,020) id, 'Received buffer index is',imrbs,imrbe, & 
+        !!phi(imrbs:imrbe,present),'iteration',iteration
         
     CALL SCHEME_POINTER(phi, dx, dt, u, bstart, bend,id, &
-        istart-spatialStencil, iend+spatialStencil,present,future)
+        istart-sst, iend+sst,present,future)
 
     CALL MPI_WAIT(send_req,MPI_STATUS_IGNORE,ierr)
 
-    CALL SCHEME_POINTER(phi, dx, dt, u, sentbufferstart, sentbufferend,id, &
-        istart-spatialStencil, iend+spatialStencil,present,future)
+    CALL SCHEME_POINTER(phi, dx, dt, u, imsbs, imsbe,id, &
+        istart-sst, iend+sst,present,future)
 
     phi(:,present)=phi(:,future)
     iteration = iteration + 1;
-    current_time = current_time + dt
+    currentTime = currentTime + dt
     
-    IF (current_time >= controlTimes(j) )THEN
-        j = j+1
-        !WRITE(*,*) 'Control point reached, writing...'
-        ALLOCATE(error_array(istart:iend));error_array(:)= 3.0D0
-        ALLOCATE(analytical_res(istart:iend));analytical_res(:)= 8.0D0
-        CALL ERROR(phi(istart:iend,present), &
-                istart,iend,FUNCTION_POINTER, &
-                present, x, u, current_time, & 
-                istart,iend,future,id,error_array,analytical_res)
+    IF (currentTime >= controlTimes(j) )THEN
         
-        CALL NORMS(error_array,L1,L2,LINF)
-        PRINT*,'PROC',id,'L1',L1,'L2',L2,'LINF',LINF
-        WRITE(*,'(A5,I1,2(A6,I2), /,3(F5.1))') 'PROC:',id,'istart',istart, 'iend', iend,&
-             (analytical_res(i),error_array(i),phi(i,present), i=istart,iend)
-        IF (id == 0) THEN
-            ALLOCATE(receive_arr(0:npoints-1))
-	        ALLOCATE(recv_err_arr(0:npoints-1))
-	        ALLOCATE(recv_ana_arr(0:npoints-1))
-        END IF
-        CALL MPI_GATHERV(analytical_res(istart:iend),sendsize,MPI_DOUBLE_PRECISION, & 
-        recv_ana_arr, sendsizes_arr, displacements_arr,MPI_DOUBLE_PRECISION,& 
-        0,MPI_COMM_WORLD,ierr)
-
-        CALL MPI_GATHERV(phi(istart:iend,present),sendsize,MPI_DOUBLE_PRECISION, & 
-        receive_arr, sendsizes_arr, displacements_arr,MPI_DOUBLE_PRECISION,& 
-        0,MPI_COMM_WORLD,ierr)
-
-        CALL MPI_GATHERV(error_array(istart:iend),sendsize,MPI_DOUBLE_PRECISION, & 
-        recv_err_arr, sendsizes_arr, displacements_arr,MPI_DOUBLE_PRECISION,& 
-        0,MPI_COMM_WORLD,ierr)
-
-        CALL MPI_REDUCE(L1,L1_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        CALL MPI_REDUCE(L2,L2_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
-        CALL MPI_REDUCE(LINF,LINF_overall,1,MPI_DOUBLE_PRECISION,MPI_MAX,0,MPI_COMM_WORLD,ierr)
-
-        IF (id == 0) THEN
-
-            WRITE(*,*) 'Writing output files'
-            WRITE(*,*) 'L1=', L1,'L2=',L2,'LINF=',LINF_overall
-            WRITE(*,*) (i, receive_arr(i), i=0,npoints-1)
-            WRITE(CFL_str,'(F8.1)') CFL
-            print*, 'CFL_str:', CFL_str
-            WRITE(time_str,'(F8.2)') current_time
-            print*, 'time_str:',time_str
- 
-            WRITE(npoints_str,'(I15)') npoints
-            print*, 'npoints_str:', npoints_str
-
-            filename = TRIM(infunction) // '_' // TRIM(scheme) // '_' // TRIM(ADJUSTL(CFL_str)) // '_'&
-             //  TRIM(ADJUSTL(npoints_str)) // '_' // TRIM(ADJUSTL(time_str)) // '.dat'
-            
-            OPEN(UNIT=100,FILE=filename,STATUS='NEW',ACTION='WRITE', IOSTAT=status,IOMSG=msg)
-
-            WRITE(aux_str,'(A15)') npoints_str
-            aux_str=ADJUSTL(aux_str)
-            i1 = index(aux_str,' ') - 1
-            WRITE(i1_str,*) i1
-            print*,'i1', i1, 'aux_str', aux_str
-            aux_str= "A" // TRIM(ADJUSTL(i1_str))
-            print*, 'aux_str posconcat', aux_str
-
-            format_str = "(A7,A3,A1,A3,A1,F4.2,A1," // aux_str(1:i1) // ",A1,F5.2,A1)"
-            format_str = TRIM(format_str)
-            print*, 'format_str', format_str
-            print*, 'aux_str', aux_str
-            WRITE(100,format_str) 'TITLE="', infunction, '_', scheme, '_',  CFL, '_', &
-                                  TRIM(ADJUSTL(npoints_str)),'_',current_time, '"'
-            WRITE(100,*) 'VARIABLES = "x-nodes", "Analytical", "Numerical", "Error"'
-            WRITE(100,*) 'ZONE'
-            WRITE(100,format_str) 'T=   "', infunction, '_', scheme, '_',  CFL, '_', &
-                                 TRIM(ADJUSTL(npoints_str)), '"'
-            PRINT*, 'HEADER WRITTEN WITHOUT ERRORS'
-
-            npoints_str= TRIM(ADJUSTL(npoints_str))
-            format_str= "(A2," // aux_str(1:i1) // ",A20)"
-            WRITE(100,format_str) 'I=', npoints_str, ', DATAPACKING=POINT'
-            
-            444 FORMAT(4(ES14.7,1X))
-
-            WRITE(100,444) (x_tot(i),recv_ana_arr(i), receive_arr(i), recv_err_arr(i), i = 0,npoints-1)
-
-            CLOSE(100)
-        END IF
+        !WRITE(*,*) 'Control point reached, calculating error and norms...'
+        
+        ! SEGREGATED ERROR AND ANALYTICAL CALCULATION
+        CALL ERROR(phi(istart:iend,present), istart,iend,FUNCTION_POINTER, present, x, u, currentTime, & 
+                istart,iend,future,id,error_array(istart:iend,j),analytical_res(istart:iend,j))
+        
+        CALL NORMS(error_array(istart:iend,j),L1(j),L2(j),LINF(j))
+        
+        PRINT*,'PROC',id,'L1',L1(j),'L2',L2(j),'LINF',LINF(j)
+        WRITE(*,'(A5,I1,2(A6,I2), /,(2I3,3(A1,F5.1)))') 'PROC:',id,'istart',istart, 'iend', iend,&
+             (id, i, 'a',analytical_res(i,j),'e',error_array(i,j),'f',phi(i,present), i=istart,iend)
+        
+        saved_results(istart:iend,j) = phi (istart:iend,present)
+        j = j+1
         IF(j >= SIZE(controlTimes)) EXIT
         dt = CFL*dx/u
     END IF
+
+        
 END DO
 
+GOTO 530
 
-!DO i=istart,iend
+505 CONTINUE !DEFAULT TIME LOOP STRUCTURE INVOLVES COMM TO GET THE I+1 AND I-1 GRID POINTS 
+!SENDS ARE: 
+!            -DOWNSTREAM SO THAT THE NEXT PROC KNOWS THE I-1 POINT
+!            -UPSTREAM SO THAT THE PREVIOUS PROC KNOWS THE I+1 POINT
+!RECEIVES ARE:
+!            -UPSTREAM SO THAT I KNOW MY I-1 POINT
+!            -DOWNSTREAM SO THAT I KNOW THE I+1 POINT
+
+!ALLOCATE(reqs(4))
+
+DO 
+    dt=min(dt,controlTimes(j)-currentTime)
+    !WRITE(*,005) id,'INIT it time dt', iteration, currentTime, dt
+
+    CALL MPI_ISEND(phi(imsbs:imsbe,present),sst, MPI_DOUBLE_PRECISION,np,0,MPI_COMM_WORLD,reqs(1),ierr) !downstream
+    CALL MPI_ISEND(phi(ipsbs:ipsbe,present),sst,MPI_DOUBLE_PRECISION,pp,0,MPI_COMM_WORLD,reqs(2),ierr)  !upstream
+
+    !WRITE(*,020) id, 'Sent buffer index is',imsbs,imsbe, & 
+        !!phi(imsbs:imsbe,present),'iteration',iteration
+        
+    CALL MPI_IRECV(phi(imrbs:imrbe,present),sst, MPI_DOUBLE_PRECISION,pp,0,MPI_COMM_WORLD,reqs(3),ierr) !upstream
+    CALL MPI_IRECV(phi(iprbs:iprbe,present),sst, MPI_DOUBLE_PRECISION,np,0,MPI_COMM_WORLD,reqs(4),ierr) !downstream
+
+    CALL SCHEME_POINTER(phi, dx, dt, u, intstart, intend,id, istart-sst, iend+sst,present,future) !compute interior
+        
+    CALL MPI_WAITALL(4, reqs, MPI_STATUSES_IGNORE,ierr)
+
+    !WRITE(*,'(A15,F8.2)') 'recvbuf is', phi(imrbs:imrbe,present)
+        
+    !WRITE(*,020) id, 'Received buffer index is',imrbs,imrbe, & 
+        !!phi(imrbs:imrbe,present),'iteration',iteration
+        
+    CALL SCHEME_POINTER(phi, dx, dt, u, ipsbs, ipsbe,id, istart-sst, iend+sst,present,future)
+
+    CALL SCHEME_POINTER(phi, dx, dt, u, imsbs, imsbe,id, istart-sst, iend+sst,present,future)
+    IF(id == 0) phi(istart,future)=phi(istart-1,future)  !!Simple way to ensure that f(-40,t) = original BC
+    IF(id == commsize - 1) phi(iend,future)=phi(iend+1,future) !!Same for f(40,t) ghost cells out of comp domain are never modified from the initial conditions
+
+    phi(:,present)=phi(:,future)
+    iteration = iteration + 1;
+    currentTime = currentTime + dt
+    
+    IF (currentTime >= controlTimes(j) )THEN
+        
+        !WRITE(*,*) 'Control point reached, calculating error and norms...'
+        
+        ! SEGREGATED ERROR AND ANALYTICAL CALCULATION
+        CALL ERROR(phi(istart:iend,present), istart,iend,FUNCTION_POINTER, present, x, u, currentTime, & 
+                istart,iend,future,id,error_array(istart:iend,j),analytical_res(istart:iend,j))
+        
+        CALL NORMS(error_array(istart:iend,j),L1(j),L2(j),LINF(j))
+        
+        PRINT*,'PROC',id,'L1',L1(j),'L2',L2(j),'LINF',LINF(j)
+        WRITE(*,'(A5,I1,2(A6,I2), /,3(F5.1))') 'PROC:',id,'istart',istart, 'iend', iend,&
+             (analytical_res(i,j),error_array(i,j),phi(i,present), i=istart,iend)
+        
+        saved_results(istart:iend,j) = phi (istart:iend,present)
+        j = j+1
+        IF(j >= SIZE(controlTimes)) EXIT
+        dt = CFL*dx/u
+    END IF
+
+END DO
+
+GOTO 530
+
+
+510 CONTINUE !TIME LOOP STRUCTURE FOR THE MAC-CORMACK METHOD
+!THE SENDS AND RECEIVES ARGUMENTS COULD BE SIMPLIFIED HERE BECAUSE OF THE SPECIFICITY OF THE TIME LOOP
+!HOWEVER, THEY ARE LEFT THE SAME AS OTHER METHODS TO AVOID PERFORMANCE IMPROVEMENTS THAT COULD LEAD TO CONFUSION EVALUATING THE RESULTS
+
+DO 
+    dt=min(dt,controlTimes(j)-currentTime)
+    !WRITE(*,005) id,'INIT it time dt', iteration, currentTime, dt
+    CALL MPI_ISEND(phi(ipsbs:ipsbe,present),sst,MPI_DOUBLE_PRECISION,pp,0,MPI_COMM_WORLD,reqs(1),ierr)  !upstream
+
+    !WRITE(*,020) id, 'Sent buffer index is',imsbs,imsbe, & 
+        !!phi(imsbs:imsbe,present),'iteration',iteration
+    CALL MPI_IRECV(phi(iprbs:iprbe,present),sst, MPI_DOUBLE_PRECISION,np,0,MPI_COMM_WORLD,reqs(2),ierr) !downstream
+    CALL MPI_WAITALL(2, reqs(1:2), MPI_STATUSES_IGNORE,ierr)
+
+    DO i=istart, iend !PREDICTOR STEP INTO FUTURE COLUMN
+        phi(i,future) = phi(i,present) - u*dt/dx*(phi(i+1,present) - phi(i,present))
+    END DO
+
+    IF(id == 0) phi(istart,future)=phi(istart-1,future)  !!Simple way to ensure that f(-40,t) = original BC
+    IF(id == commsize - 1) phi(iend,future)=phi(iend+1,future) !!Same for f(40,t) ghost cells out of comp domain are never modified from the initial conditions
+
+    CALL MPI_ISEND(phi(imsbs:imsbe,future),sst,MPI_DOUBLE_PRECISION,np,0,MPI_COMM_WORLD,reqs(3),ierr)
+    CALL MPI_IRECV(phi(imrbs:imrbe,future),sst,MPI_DOUBLE_PRECISION,pp,0,MPI_COMM_WORLD,reqs(4),ierr)
+    CALL MPI_WAITALL(2,reqs(3:4),MPI_STATUSES_IGNORE,ierr)
+    
+    DO i=iend,istart,-1 !!this doesn't work with reverse flow, just as the rest of the loop
+        phi(i,future) = 0.5D0*(phi(i,present) + phi(i,future)) - u*dt/dx*(phi(i,future) - phi(i-1,future))
+    END DO !Thanks to computing the subarray in reverse direction we can avoid using an extra array to store the predictor
+
+    IF(id == 0) phi(istart,future)=phi(istart-1,future)  !!Simple way to ensure that f(-40,t) = original BC
+    IF(id == commsize - 1) phi(iend,future)=phi(iend+1,future) !!Same for f(40,t) ghost cells out of comp domain are never modified from the initial conditions
+  
+    phi(:,present)=phi(:,future)
+    iteration = iteration + 1;
+    currentTime = currentTime + dt
+    
+    IF (currentTime >= controlTimes(j) )THEN
+        
+        !WRITE(*,*) 'Control point reached, calculating error and norms...'
+        
+        ! SEGREGATED ERROR AND ANALYTICAL CALCULATION
+        CALL ERROR(phi(istart:iend,present), istart,iend,FUNCTION_POINTER, present, x, u, currentTime, & 
+                istart,iend,future,id,error_array(istart:iend,j),analytical_res(istart:iend,j))
+        
+        CALL NORMS(error_array(istart:iend,j),L1(j),L2(j),LINF(j))
+        
+        PRINT*,'PROC',id,'L1',L1(j),'L2',L2(j),'LINF',LINF(j)
+        WRITE(*,'(A5,I1,2(A6,I2), /,3(F5.1))') 'PROC:',id,'istart',istart, 'iend', iend,&
+             (analytical_res(i,j),error_array(i,j),phi(i,present), i=istart,iend)
+        
+        saved_results(istart:iend,j) = phi (istart:iend,present)
+        j = j+1
+        IF(j >= SIZE(controlTimes)) EXIT
+        dt = CFL*dx/u
+    END IF
+
+END DO
+
+GOTO 530
+
+
+
+
+
+
+530 CONTINUE
+! GATHERING DATA AND WRITING OUTPUT
+
+IF (id == 0) THEN
+    ALLOCATE(receive_arr(0:npoints-1,ncontrolTimes))
+    ALLOCATE(r_err(0:npoints-1,ncontrolTimes))
+    ALLOCATE(r_ana(0:npoints-1,ncontrolTimes))
+    ALLOCATE(L1_tot(ncontrolTimes))
+    ALLOCATE(L2_tot(ncontrolTimes))
+    ALLOCATE(LINF_overall(ncontrolTimes))
+END IF
+
+!!! LOS GATHERV HAY QUE HACERLOS EN UN DO O HACER UN NUEVO TIPO DE DATO QUE SEA LA MATRIZ COMPLETA
+DO j = 1, ncontrolTimes
+    CALL MPI_GATHERV(analytical_res(istart:iend,j),sendsize,MPI_DOUBLE_PRECISION, & 
+        r_ana(:,j), ssizes, displacements,MPI_DOUBLE_PRECISION,& 
+        0,MPI_COMM_WORLD,ierr)
+
+    CALL MPI_GATHERV(phi(istart:iend,present),sendsize,MPI_DOUBLE_PRECISION, & 
+        receive_arr(:,j), ssizes, displacements,MPI_DOUBLE_PRECISION,& 
+        0,MPI_COMM_WORLD,ierr)
+
+    CALL MPI_GATHERV(error_array(istart:iend,j),sendsize,MPI_DOUBLE_PRECISION, & 
+        r_err(:,j), ssizes, displacements,MPI_DOUBLE_PRECISION,& 
+        0,MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(L1(j),L1_tot(j),1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(L2(j),L2_tot(j),1,MPI_DOUBLE_PRECISION,MPI_SUM,0,MPI_COMM_WORLD,ierr)
+    CALL MPI_REDUCE(LINF(j),LINF_overall(j),1,MPI_DOUBLE_PRECISION,MPI_MAX,0,MPI_COMM_WORLD,ierr)
+        
+END DO
+
+IF (id == 0) THEN
+
+    WRITE(*,*) 'Writing output files'
+    !WRITE(*,*) 'L1=', L1(j),'L2=',L2(j),'LINF=',LINF_overall(j)
+    WRITE(*,*) (i, receive_arr(i,1), i=0,npoints-1)
+    WRITE(CFL_str,'(F8.1)') CFL
+    print*, 'CFL_str:', CFL_str
+    WRITE(time_str,'(F8.2)') currentTime
+    print*, 'time_str:',time_str
+
+    WRITE(npoints_str,'(I15)') npoints
+    print*, 'npoints_str:', npoints_str
+
+    filename = TRIM(infunction) // '_' // TRIM(scheme) // '_' // TRIM(ADJUSTL(CFL_str)) // '_'&
+     //  TRIM(ADJUSTL(npoints_str)) // '_' // TRIM(ADJUSTL(time_str)) // '.dat'
+    
+    OPEN(UNIT=100,FILE=filename,STATUS='NEW',ACTION='WRITE', IOSTAT=status,IOMSG=msg)
+
+    WRITE(aux_str,'(A15)') npoints_str
+    aux_str=ADJUSTL(aux_str)
+    i1 = index(aux_str,' ') - 1
+    WRITE(i1_str,*) i1
+    print*,'i1', i1, 'aux_str', aux_str
+    aux_str= "A" // TRIM(ADJUSTL(i1_str))
+    print*, 'aux_str posconcat', aux_str
+
+    format_str = "(A7,A3,A1,A3,A1,F4.2,A1," // aux_str(1:i1) // ",A1,F5.2,A1)"
+    format_str = TRIM(format_str)
+    print*, 'format_str', format_str
+    print*, 'aux_str', aux_str
+    WRITE(100,format_str) 'TITLE="', infunction, '_', scheme, '_',  CFL, '_', &
+                          TRIM(ADJUSTL(npoints_str)),'_',currentTime, '"'
+    WRITE(100,*) 'VARIABLES = "x-nodes", "Analytical", "Numerical", "Error"'
+    WRITE(100,*) 'ZONE'
+    WRITE(100,format_str) 'T=   "', infunction, '_', scheme, '_',  CFL, '_', &
+                         TRIM(ADJUSTL(npoints_str)), '"'
+    PRINT*, 'HEADER WRITTEN WITHOUT ERRORS'
+
+    npoints_str= TRIM(ADJUSTL(npoints_str))
+    format_str= "(A2," // aux_str(1:i1) // ",A20)"
+    WRITE(100,format_str) 'I=', npoints_str, ', DATAPACKING=POINT'
+    
+    444 FORMAT(4(ES14.7,1X))
+
+    WRITE(100,444) (x_tot(i),r_ana(i,1), receive_arr(i,1), r_err(i,1), i = 0,npoints-1)
+
+    CLOSE(100)
+END IF
+
+!GOTO 550
+
+!550 CONTINUE
+
 WRITE(*,121) (id,i, phi(i,present), i=istart,iend)
 121 FORMAT(6(I3,I3,F8.2),/)
-!END DO
 
 CALL MPI_FINALIZE(ierr)
 END PROGRAM parallel_linear_advection
@@ -484,10 +668,11 @@ END PROGRAM parallel_linear_advection
 
 !-ordenar los allocate y comentar los significados de las cosas mínimamente
 !-pasar los case select a un módulo misc_subroutines.f90
-!-Cambiar lso nombres de los esquemas a tres letras
-!-simplificar los nombres de las variables? Quizás pon un mensaje en el foro
-!-implementar el Maccormack y el TVD
-!-sacar el write del time loop añadiendo las columnas necesarias a los arrays de resultado y haciéndolo todo fuera
+!-Cambiar lso nombres de los esquemas a tres letras  OK
+!-simplificar los nombres de las variables? Quizás pon un mensaje en el foro   OK A FALTA DE REPASO
+!-implementar el Maccormack OK y el TVD
+!-sacar el write del time loop añadiendo las columnas necesarias a los arrays de resultado y haciéndolo todo fuera OK SIN TESTEAR
 !-archivo de salida con el informe en tiempo de las normas, mira a ver si lo haces tecplot-readable
 !-hacer una opción de escupir un paraview-readable (un csv con los títulos de las variables y todo escupido por columnas)
 !-limpiar de variables sobrantes tipo x_nodes (que ya la has quitado)
+!-hacer la escritura de los tecplot-readable como una serie de datos en tiempo, pendiente que te leas esa parte
