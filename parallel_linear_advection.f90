@@ -144,85 +144,12 @@ CALL ANALYTICAL(phi(istart-sst:istart+sst,present), istart-sst,iend+sst,FUNCTION
 CALL ANALYTICAL(phi(istart-sst:istart+sst,future), istart-sst,iend+sst,FUNCTION_POINTER, &
                 present, x, u, currentTime, istart-sst,iend+sst,future,id)
 
-!-----------------------------------------------------------
-!BLOCK III: FLUX DETERMINATION AND BOUNDARY EXCHANGE SETUP
-!-----------------------------------------------------------
+!--------------------------------------------------------------------!
+!BLOCK III: FLUX DIRECTION DETERMINATION AND BOUNDARY EXCHANGE SETUP !
+!--------------------------------------------------------------------!
 !We only need to do this once because of the equation we are solving (u=const.)
 
-IF ( u > 0.0 ) THEN
-    IF(id == 0) THEN
-        pp = MPI_PROC_NULL !THIS WAY there are no IF's inside the time loop to distinguish processors
-        np = id +1
-        IF(commsize == 1) np= MPI_PROC_NULL
-    ELSE IF(id == commsize - 1) THEN
-        pp = id - 1
-        np = MPI_PROC_NULL
-    ELSE
-        pp = id - 1 !previous proc
-        np = id + 1 !next proc
-    END IF
-    
-    !IMPORTANT: THE I-1 AND I+1 CONCEPTS IN THE FOLLOWING VARIABLES CORRESPONDS TO &
-    !THE UPSTREAM AND DOWNSTREAM CELL WITH RESPECT TO THE RECEIVER PROCESSOR
-    !THIS WILL ALLOW US TO KEEP THE TIME LOOP COMM STRUCTURE INDEPENDENT OF THE FLOW DIRECTION
-    !THE SCHEMES' SUBROUTINES ALSO ADAPT TO THE FLOW DIRECTION IN THIS SENSE BY TAKING ABSOLUTE VALUE OF THE VELOCITY AND REVERSING THE SEARCHED CELL (turns i-1 into i+1)
-    !"i-1" is upstream cell
-    !"i+1" is downstream cell
-    increment = 1
-    imsbs = iend - sst + 1    ! "i-1" sent buffer start index
-    imsbe = iend              ! "i-1" sent buffer end index
-    imrbs = istart - sst      ! "i-1" received buffer start index
-    imrbe = istart - 1        ! "i-1" received buffer end index
-
-    ipsbs = istart            ! "i+1" sent buffer start index
-    ipsbe = istart + sst - 1  ! "i+1" sent buffer end index
-    iprbs = iend + 1          ! "i+1" received buffer start index
-    iprbe = iend + sst        ! "i+1" received buffer end index
-
-    !WRITE(*,100) 'u+',' Processor',id,'sends indices',imsbs,':',imsbe
-    !WRITE(*,100) 'u+',' Processor',id,'recvs indices',imrbs,':',imrbe
-    
-    bstart = istart
-    bend = istart + sst -1
-
-ELSE IF ( u < 0.0 ) THEN
-    IF(id == 0) THEN
-        np = MPI_PROC_NULL
-        pp = id +1
-    ELSE IF(id == commsize - 1) THEN
-        np = id - 1
-        pp = MPI_PROC_NULL
-    ELSE
-        pp = id + 1 ! rank-1 sends info to this process
-        np = id - 1 ! this process sends info to np
-    END IF
-    
-    WRITE(*,*) 'Flux goes from right to left'
-    increment = -1
-    imsbs = istart            ! "i-1" sent buffer start index
-    imsbe = istart + sst - 1  ! "i-1" sent buffer end index
-    imrbs = iend + 1          ! "i-1" received buffer start index
-    imrbe = iend + sst        ! "i-1" received buffer end index
-
-    ipsbs = iend - sst + 1    ! "i+1" sent buffer start index
-    ipsbe = iend              ! "i+1" sent buffer end index
-    iprbs = istart - sst      ! "i+1" received buffer start index
-    iprbe = istart - 1        ! "i+1" received buffer end index
-
-    !WRITE(*,100) 'u-',' Processor',id,'sends indices',imsbs,':',imsbe
-    !WRITE(*,100) 'u-',' Processor',id,'recvs indices',imrbs,':',imrbe
-    bstart = iend - sst +1
-    bend = iend
-!    intstart = istart                    !!!THESE ARE IF I USE BUFFERED SEND
-!    intend = iend - sst
-ELSE
-    WRITE(*,*) 'Flux is neither positive nor negative. It is either zero or an error has ocurred'
-    CALL MPI_FINALIZE(ierr)
-    STOP
-END IF
-
-100 FORMAT(A3,A10,I3,A15,I4,A1,I4)
-
+CALL FLUXDETERMINATION(u,id,pp,np,imsbs,imsbe,imrbs,imrbe,ipsbs,ipsbe,iprbs,iprbe,bstart,bend,sst,istart,iend,commsize,increment)
 intstart = istart + sst
 intend = iend - sst
 absu = ABS(u)
@@ -234,8 +161,6 @@ absu = ABS(u)
 005 FORMAT(I3,A20,I5,2F10.2)
 020 FORMAT(I4, A25, 2I4, F7.2,A10,I3)
 
-
-
 !! ALLOCATIONS HAVE "RANDOM" VALUES TO HELP FINDING BUGS
 ALLOCATE(error_array(istart:iend,ncontrolTimes));error_array(:,:) = 3.0D0 
 ALLOCATE(analytical_res(istart:iend,ncontrolTimes));analytical_res(:,:) = 8.0D0  
@@ -243,6 +168,7 @@ ALLOCATE(L1(ncontrolTimes));L1(:) = 5.0D0
 ALLOCATE(L2(ncontrolTimes));L2(:) = 6.0D0
 ALLOCATE(LINF(ncontrolTimes));LINF(:) = 70.D0
 ALLOCATE(saved_results(istart:iend,ncontrolTimes)); saved_results(:,:) = 211.0D0
+
 
 WRITE(*,010) 'Processor',id,'waiting for the barrier'
 call MPI_BARRIER(MPI_COMM_WORLD,ierr)
@@ -271,7 +197,7 @@ END SELECT
 !RECEIVES ARE ONLY UPSTREAM
 DO 
     dt=min(dt,controlTimes(j)-currentTime)
-    !WRITE(*,005) id,'INIT it time dt', iOTRA ESTRUCTURA NUMÉRICteration, currentTime, dt
+    !WRITE(*,005) id,'INIT it time dt', iteration, currentTime, dt
 
     CALL MPI_ISEND(phi(imsbs:imsbe,present),sst, MPI_DOUBLE_PRECISION,np,0,MPI_COMM_WORLD,send_req,ierr)
 
@@ -300,10 +226,6 @@ DO
     currentTime = currentTime + dt
     
     IF (currentTime >= controlTimes(j) )THEN
-        
-        !WRITE(*,*) 'Control point reached, calculating error and norms...'
-
-
         saved_results(istart:iend,j) = phi (istart:iend,present)
         j = j+1
         IF(j >= SIZE(controlTimes)) EXIT
@@ -313,10 +235,10 @@ DO
         
 END DO
 
-print*, 'Im out of the loop'
+!print*, 'Im out of the loop'
 GOTO 530
 
-505 CONTINUE !DEFAULT TIME LOOP STRUCTURE INVOLVES COMM TO GET THE I+1 AND I-1 GRID POINTS 
+505 CONTINUE !DEFAULT TIME LOOP STRUCTURE INVOLVES COMM TO GET THE UPSTREAM AND DOWNSTREAM STENCIL GRID POINTS 
 !SENDS ARE: 
 !            -DOWNSTREAM SO THAT THE NEXT PROC KNOWS THE I-1 POINT
 !            -UPSTREAM SO THAT THE PREVIOUS PROC KNOWS THE I+1 POINT
@@ -359,23 +281,11 @@ DO
     currentTime = currentTime + dt
     
     IF (currentTime >= controlTimes(j) )THEN
-        
-        !WRITE(*,*) 'Control point reached, calculating error and norms...'
-        
-        ! SEGREGATED ERROR AND ANALYTICAL CALCULATION
-        CALL ERROR(phi(istart:iend,present), istart,iend,FUNCTION_POINTER, present, x(istart:iend), u, currentTime, & 
-                istart,iend,future,id,error_array(istart:iend,j),analytical_res(istart:iend,j))
-        
-        CALL NORMS(error_array(istart:iend,j),L1(j),L2(j),LINF(j))
-        
-        PRINT*,'PROC',id,'L1',L1(j),'L2',L2(j),'LINF',LINF(j)
-        WRITE(*,'(A5,I1,2(A6,I2), /,3(F5.1))') 'PROC:',id,'istart',istart, 'iend', iend,&
-             (analytical_res(i,j),error_array(i,j),phi(i,present), i=istart,iend)
-        
+
         saved_results(istart:iend,j) = phi (istart:iend,present)
         j = j+1
         IF(j >= SIZE(controlTimes)) EXIT
-        dt = CFL*dx/u
+        dt = CFL*dx/absu
     END IF
 
 END DO
@@ -420,33 +330,15 @@ DO
     currentTime = currentTime + dt
     
     IF (currentTime >= controlTimes(j) )THEN
-        
-        !WRITE(*,*) 'Control point reached, calculating error and norms...'
-        
-        ! SEGREGATED ERROR AND ANALYTICAL CALCULATION
-        CALL ERROR(phi(istart:iend,present), istart,iend,FUNCTION_POINTER, present, x(istart:iend), u, currentTime, & 
-                istart,iend,future,id,error_array(istart:iend,j),analytical_res(istart:iend,j))
-        
-        CALL NORMS(error_array(istart:iend,j),L1(j),L2(j),LINF(j))
-        
-        PRINT*,'PROC',id,'L1',L1(j),'L2',L2(j),'LINF',LINF(j)
-        WRITE(*,'(A5,I1,2(A6,I2), /,3(F5.1))') 'PROC:',id,'istart',istart, 'iend', iend,&
-             (analytical_res(i,j),error_array(i,j),phi(i,present), i=istart,iend)
-        
         saved_results(istart:iend,j) = phi (istart:iend,present)
         j = j+1
         IF(j >= SIZE(controlTimes)) EXIT
-        dt = CFL*dx/u
+        dt = CFL*dx/absu
     END IF
 
 END DO
 
 GOTO 530
-
-
-
-
-
 
 530 CONTINUE
 ! GATHERING DATA AND WRITING OUTPUT
@@ -513,7 +405,7 @@ IF (id == 0) THEN
     format_str = "(A7,A3,A1,A3,A1,F4.2,A1," // aux_str(1:i1) // ",A1,F5.2,A1)"
     format_str = TRIM(format_str)
 
-    DO j=1,ncontrolTimes
+    DO j=1,ncontrolTimes !WE WRITE ONE TECPLOT-ASCII FILE FOR EVERY SAVED INSTANT
         WRITE(time_str,'(F8.2)') controlTimes(j)
         filename = TRIM(infunction) // '_' // TRIM(scheme) // '_' // TRIM(ADJUSTL(CFL_str)) // '_'&
         //  TRIM(ADJUSTL(npoints_str)) // '_' // TRIM(ADJUSTL(time_str)) // '.dat'
@@ -537,7 +429,7 @@ IF (id == 0) THEN
         
 
         npoints_str= TRIM(ADJUSTL(npoints_str))
-        format2_str= "(A2," // aux_str(1:i1) // ",A30,I0,A15,F8.2)"
+        format2_str= "(A2," // aux_str(1:i1) // ",A30,I0,A15,F6.2)"
         WRITE(100,format2_str) 'I=', npoints_str, ', DATAPACKING=POINT, STRANDID=',strandid,', SOLUTIONTIME=',controlTimes(j)
         PRINT*, 'HEADER WRITTEN WITHOUT ERRORS'
         444 FORMAT(4(ES14.7,1X))
@@ -552,8 +444,8 @@ END IF
 
 !550 CONTINUE
 
-WRITE(*,121) (id,i, phi(i,present), i=istart,iend)
-121 FORMAT(6(I3,I3,F8.2),/)
+!WRITE(*,121) (id,i, phi(i,present), i=istart,iend)
+!121 FORMAT(6(I3,I3,F8.2),/)
 
 CALL MPI_FINALIZE(ierr)
 END PROGRAM parallel_linear_advection
@@ -564,16 +456,21 @@ END PROGRAM parallel_linear_advection
 !     PENDING      !
 !------------------!
 
-!-ordenar los allocate y comentar los significados de las cosas mínimamente
-!-pasar los case select a un módulo misc_subroutines.f90 ?? NECESARIO?
-!-Cambiar lso nombres de los esquemas a tres letras  OK
-!-simplificar los nombres de las variables? Quizás pon un mensaje en el foro   OK A FALTA DE REPASO
-!-implementar el Maccormack OK, algún TVD NOT YET, THIRD ORDER UPWIND OK SIN TESTEAR
-!-sacar el write del time loop añadiendo las columnas necesarias a los arrays de resultado y haciéndolo todo fuera OK SIN TESTEAR
+!!!-ordenar los allocate y comentar los significados de las cosas mínimamente OK~
+!!!-pasar los case select a un módulo misc_subroutines.f90 OK
+!!!-Cambiar lso nombres de los esquemas a tres letras  OK
+!!!-simplificar los nombres de las variables? Quizás pon un mensaje en el foro   OK A FALTA DE REPASO
+!!!-implementar el Maccormack OK, algún TVD NOT YET, THIRD ORDER UPWIND OK AUNQUE NO SE SI ES CORRECTO IGUAL QUE CON EL RESTO ME HACE FALTA CHEQUEAR CON EL SERIAL CODE
+!!!-sacar el write del time loop añadiendo las columnas necesarias a los arrays de resultado y haciéndolo todo fuera OK
 !-archivo de salida con el informe en tiempo de las normas, mira a ver si lo haces tecplot-readable
 !-hacer una opción de escupir un paraview-readable (un csv con los títulos de las variables y todo escupido por columnas)
-!-limpiar de variables sobrantes tipo x_nodes (que ya la has quitado)
-!-hacer la escritura de los tecplot-readable como una serie de datos en tiempo, pendiente que te leas esa parte OK
+!!!-limpiar de variables sobrantes tipo x_nodes (que ya la has quitado) 
+!!!-hacer la escritura de los tecplot-readable como una serie de datos en tiempo, pendiente que te leas esa parte OK
 !-mírate el capítulo de estabilidad del hoffmann para la numerical viscosity, tienes que hacer el assessment a priori
 !-mírate todos los tutoriales de tecplot incluido pytecplot
 !-WARN THE USER ABOUT NUMERICAL DIFFUSION FOR MODIFYING DT WHEN CFL=1.0
+!-revisa de nuevo el tema de los bstart y bend y cómo haces los boundaries en cada time loop structure
+!-testear si la barrera es necesaria
+!-comprobar el lax ahora que la x no se va loca?
+!-maccormack no funciona en reverse por lo de no usar un cacharro externo, arréglalo
+!-cambiar los nombres a los argumentos de las subrutinas, puedes llamarlos igual que en el main sin problema

@@ -63,3 +63,79 @@ CASE ('exp')
 CASE ('lin')
     FUNCTION_POINTER => LINEAR !USED DURING DEVELOPMENT TO SEE DIFFERENT VALUES AT EACH GRID POINT
 END SELECT
+
+CALL FLUXDETERMINATION(u,id,pp,np,imsbs,imsbe,imrbs,imrbe,ipsbs,ipsbe,iprbs,iprbe,bstart,bend,sst,istart,iend,comm  size,increment)
+
+IF ( u > 0.0 ) THEN
+    IF(id == 0) THEN
+        pp = MPI_PROC_NULL !THIS WAY there are no IF's inside the time loop to distinguish processors
+        np = id +1
+        IF(commsize == 1) np= MPI_PROC_NULL
+    ELSE IF(id == commsize - 1) THEN
+        pp = id - 1
+        np = MPI_PROC_NULL
+    ELSE
+        pp = id - 1 !previous proc
+        np = id + 1 !next proc
+    END IF
+    
+    !IMPORTANT: THE I-1 AND I+1 CONCEPTS IN THE FOLLOWING VARIABLES CORRESPONDS TO &
+    !THE UPSTREAM AND DOWNSTREAM CELL WITH RESPECT TO THE RECEIVER PROCESSOR
+    !THIS WILL ALLOW US TO KEEP THE TIME LOOP COMM STRUCTURE INDEPENDENT OF THE FLOW DIRECTION
+    !THE SCHEMES' SUBROUTINES ALSO ADAPT TO THE FLOW DIRECTION IN THIS SENSE BY TAKING ABSOLUTE VALUE OF THE VELOCITY AND REVERSING THE SEARCHED CELL (turns i-1 into i+1)
+    !"i-1" is upstream cell
+    !"i+1" is downstream cell
+    increment = 1
+    imsbs = iend - sst + 1    ! "i-1" sent buffer start index
+    imsbe = iend              ! "i-1" sent buffer end index
+    imrbs = istart - sst      ! "i-1" received buffer start index
+    imrbe = istart - 1        ! "i-1" received buffer end index
+
+    ipsbs = istart            ! "i+1" sent buffer start index
+    ipsbe = istart + sst - 1  ! "i+1" sent buffer end index
+    iprbs = iend + 1          ! "i+1" received buffer start index
+    iprbe = iend + sst        ! "i+1" received buffer end index
+
+    !WRITE(*,100) 'u+',' Processor',id,'sends indices',imsbs,':',imsbe
+    !WRITE(*,100) 'u+',' Processor',id,'recvs indices',imrbs,':',imrbe
+    
+    bstart = istart
+    bend = istart + sst -1
+
+ELSE IF ( u < 0.0 ) THEN
+    IF(id == 0) THEN
+        np = MPI_PROC_NULL
+        pp = id +1
+    ELSE IF(id == commsize - 1) THEN
+        np = id - 1
+        pp = MPI_PROC_NULL
+    ELSE
+        pp = id + 1 ! rank-1 sends info to this process
+        np = id - 1 ! this process sends info to np
+    END IF
+    
+    WRITE(*,*) 'Flux goes from right to left'
+    increment = -1
+    imsbs = istart            ! "i-1" sent buffer start index
+    imsbe = istart + sst - 1  ! "i-1" sent buffer end index
+    imrbs = iend + 1          ! "i-1" received buffer start index
+    imrbe = iend + sst        ! "i-1" received buffer end index
+
+    ipsbs = iend - sst + 1    ! "i+1" sent buffer start index
+    ipsbe = iend              ! "i+1" sent buffer end index
+    iprbs = istart - sst      ! "i+1" received buffer start index
+    iprbe = istart - 1        ! "i+1" received buffer end index
+
+    !WRITE(*,100) 'u-',' Processor',id,'sends indices',imsbs,':',imsbe
+    !WRITE(*,100) 'u-',' Processor',id,'recvs indices',imrbs,':',imrbe
+    bstart = iend - sst +1
+    bend = iend
+!    intstart = istart                    !!!THESE ARE IF I USE BUFFERED SEND
+!    intend = iend - sst
+ELSE
+    WRITE(*,*) 'Flux is neither positive nor negative. It is either zero or an error has ocurred'
+    CALL MPI_FINALIZE(ierr)
+    STOP
+END IF
+
+100 FORMAT(A3,A10,I3,A15,I4,A1,I4)
