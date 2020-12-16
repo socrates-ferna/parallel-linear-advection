@@ -1,6 +1,5 @@
 PROGRAM parallel_linear_advection
 USE MPI
-
 USE numerical_schemes !, only: UPWIND, CENTRAL, LAX, LEAPFROG, LAXWENDROFF!, ANALYTICAL
 USE input_functions !, only: SGN, EXPONENTIAL, LINEAR, ANALYTICAL, ERROR, NORMS
 USE misc_subroutines
@@ -11,7 +10,7 @@ USE misc_subroutines
 ! Licence: This code is distributed under GNU GPL Licence
 ! Author: Sócrates Fernández Fernández, s(dot)fernaferna(at)gmail(dot)com
 ! GitHub: socrates-ferna
-! LAST MOD: 10/12/2020
+! LAST MOD: 14/12/2020
 !-----------------------------------------------------------------------
 ! COMMENTS
 ! -I leave several WRITEs throughout the code to facilitate the user the retrieval of info when investigating how the code works
@@ -143,7 +142,10 @@ CALL ANALYTICAL(phi(istart-sst:istart+sst,present), istart-sst,iend+sst,FUNCTION
                 present, x, u, currentTime, istart-sst,iend+sst,future,id)
 CALL ANALYTICAL(phi(istart-sst:istart+sst,future), istart-sst,iend+sst,FUNCTION_POINTER, &
                 present, x, u, currentTime, istart-sst,iend+sst,future,id)
-
+IF( tst > 1) THEN
+    CALL ANALYTICAL(phi(:,past), istart,iend,FUNCTION_POINTER, &
+                    present, x, u, currentTime, istart,iend,future,id)
+END IF  
 !--------------------------------------------------------------------!
 !BLOCK III: FLUX DIRECTION DETERMINATION AND BOUNDARY EXCHANGE SETUP !
 !--------------------------------------------------------------------!
@@ -309,6 +311,7 @@ DO
 
     DO i=istart, iend !PREDICTOR STEP INTO FUTURE COLUMN
         phi(i,future) = phi(i,present) - u*dt/dx*(phi(i+1,present) - phi(i,present))
+        !phi(i,future) = phi(i,present) - absu*dt/dx*(phi(i+increment,present) - phi(i,present)) !!TESTEA QUE ESTO SOPORTA REVERSE FLUX
     END DO
 
     IF(id == 0) phi(istart,future)=phi(istart-1,future)  !!Simple way to ensure that f(-40,t) = original BC
@@ -399,7 +402,7 @@ IF (id == 0) THEN
     print*, 'npoints_str:', npoints_str
     WRITE(aux_str,'(A15)') npoints_str
     aux_str=ADJUSTL(aux_str)
-    i1 = index(aux_str,' ') - 1
+    i1 = INDEX(aux_str,' ') - 1
     WRITE(i1_str,*) i1
     aux_str= "A" // TRIM(ADJUSTL(i1_str))
     format_str = "(A7,A3,A1,A3,A1,F4.2,A1," // aux_str(1:i1) // ",A1,F5.2,A1)"
@@ -437,7 +440,18 @@ IF (id == 0) THEN
         WRITE(100,444) (x_tot(i),r_ana(i,j), receive_arr(i,j), r_err(i,j), i = 0,npoints-1)
 
         CLOSE(100)
+
     END DO
+    i1 = INDEX(filename,' ') - 1 - 3
+    filename = 'norms_' // filename(1:i1) // '.csv'
+    OPEN(UNIT=101,FILE=filename,STATUS='NEW', ACTION='WRITE',IOSTAT=status,IOMSG=msg)
+    WRITE(101,'(A12)') 't,L1,L2,LINF' !File header
+
+    102 FORMAT(4(F9.5,','))
+    DO j = 1, ncontrolTimes
+        WRITE(101,102) controlTimes(j),L1(j),L2(j),LINF(j)
+    END DO
+    CLOSE(101)
 END IF
 
 !GOTO 550
@@ -457,15 +471,9 @@ END PROGRAM parallel_linear_advection
 !------------------!
 
 !!!-ordenar los allocate y comentar los significados de las cosas mínimamente OK~
-!!!-pasar los case select a un módulo misc_subroutines.f90 OK
-!!!-Cambiar lso nombres de los esquemas a tres letras  OK
-!!!-simplificar los nombres de las variables? Quizás pon un mensaje en el foro   OK A FALTA DE REPASO
 !!!-implementar el Maccormack OK, algún TVD NOT YET, THIRD ORDER UPWIND OK AUNQUE NO SE SI ES CORRECTO IGUAL QUE CON EL RESTO ME HACE FALTA CHEQUEAR CON EL SERIAL CODE
-!!!-sacar el write del time loop añadiendo las columnas necesarias a los arrays de resultado y haciéndolo todo fuera OK
 !-archivo de salida con el informe en tiempo de las normas, mira a ver si lo haces tecplot-readable
 !-hacer una opción de escupir un paraview-readable (un csv con los títulos de las variables y todo escupido por columnas)
-!!!-limpiar de variables sobrantes tipo x_nodes (que ya la has quitado) 
-!!!-hacer la escritura de los tecplot-readable como una serie de datos en tiempo, pendiente que te leas esa parte OK
 !-mírate el capítulo de estabilidad del hoffmann para la numerical viscosity, tienes que hacer el assessment a priori
 !-mírate todos los tutoriales de tecplot incluido pytecplot
 !-WARN THE USER ABOUT NUMERICAL DIFFUSION FOR MODIFYING DT WHEN CFL=1.0
@@ -474,3 +482,7 @@ END PROGRAM parallel_linear_advection
 !-comprobar el lax ahora que la x no se va loca?
 !-maccormack no funciona en reverse por lo de no usar un cacharro externo, arréglalo
 !-cambiar los nombres a los argumentos de las subrutinas, puedes llamarlos igual que en el main sin problema
+!-hacer el input con una NAMELIST. CAP 14 CHAPMAN
+!-intentarás enchufar un WENO de alto orden, por tus cojone
+!-errores varios de configuración deben ser alertados al usuario.
+!-vuélvete a hacer el esquema de la nonblocking comm cuando tengas el serial y ves si puedes eliminar un wait o hacer un buffered send y no llamar dos veces a actualizar el boundary
