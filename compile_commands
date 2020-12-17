@@ -1,0 +1,3 @@
+ifort -g -debug all -traceback -check bounds -fp-model source -debug inline-debug-info misc_subroutines.f90 input_functions.f90 numerical_schemes.f90 serial_linear_advection.f90
+mpiifort -g -debug all -traceback -check bounds -fp-model source -debug inline-debug-info misc_subroutines.f90 input_functions.f90 numerical_schemes.f90 serial_linear_advection.f90
+gfortran compilation options pending

@@ -3,13 +3,13 @@ USE numerical_schemes
 USE input_functions
 USE misc_subroutines
 !-----------------------------------------------------------------------
-! Purpose: 1D code for serial resolution of the linear advection equation
+! Purpose: 1D code for serial resolution of the linear advection equation (wave equation)
 ! using several numerical schemes. The analytical solution is used to verify the numerical results.
 !
 ! Licence: This code is distributed under GNU GPL Licence
 ! Author: Sócrates Fernández Fernández, s(dot)fernaferna(at)gmail(dot)com
 ! GitHub: socrates-ferna
-! LAST MOD: 14/12/2020
+! LAST MOD: 16/12/2020
 !-----------------------------------------------------------------------
 ! A SHORT COMMMENT ON THE CODE:
 ! I developed this code after the parallel one, therefore, some variables,
@@ -19,14 +19,16 @@ USE misc_subroutines
 ! extra array to fit the dimensions 0:npoints-1 which in the parallel code
 ! corresponded to each processor's interval start and end
 !-----------------------------------------------------------------------
-!! LISTA.
-!- niters_guess
-!- arreglo reverse flux mccormack
-!- todos los cputime copia la estructura
-!- línea de execution time variables entera + iterationtimes array
-!- doublesizearray subroutine and call inside loop
-!- avg and whole time report
-!-fileexist, writetime1 y 2
+!! LISTA para actualizar en parallel
+!- niters_guess OK
+!- arreglo reverse flux mccormack OK NOT TESTED
+!- todos los cputime copia la estructura OK NOT TESTED
+!- línea de execution time variables entera + iterationtimes array NO
+!- doublesizearray subroutine and call inside loop NO
+!- avg and whole time report OK
+!-fileexist, writetime1 y 2 SI
+!- CFL_str dos decimales SI
+!- NAMELIST INPUT OK
 IMPLICIT NONE
 INTEGER :: i, j, npoints, iteration, past, present, future, ncontrolTimes, i1, increment, status, strandid, niters_guess
 INTEGER :: correctorstart, correctorend, mstart, mend
@@ -149,13 +151,12 @@ DO
         dt = CFL*dx/absu
     END IF
 
-    CALL CPU_TIME(iterationtime2)
-    iterationtimes(iteration) = iterationtime2 - iterationtime2
-
     IF( iteration == SIZE(iterationtimes) ) THEN !! In case number of iterations exceeds initial guess
         CALL DOUBLESIZEARRAY(iterationtimes,aux_array)
     END IF
 
+    CALL CPU_TIME(iterationtime2)
+    iterationtimes(iteration) = iterationtime2 - iterationtime2
 END DO
 
 CALL CPU_TIME(timeloop2)
@@ -168,11 +169,13 @@ GOTO 530
 IF(u > 0.0) THEN
 correctorstart = intend
 correctorend = intstart
-ELSE IF(u > 0.0) THEN
+ELSE IF(u < 0.0) THEN
     correctorstart = intstart
     correctorend = intend
 END IF
+
 CALL CPU_TIME(timeloop1)
+
 DO 
     CALL CPU_TIME(iterationtime1)
     dt=min(dt,controlTimes(j)-currentTime)
@@ -195,12 +198,12 @@ DO
         dt = CFL*dx/absu
     END IF
 
-    CALL CPU_TIME(iterationtime2)
-    iterationtimes(iteration) = iterationtime2 - iterationtime2
-
     IF( iteration == SIZE(iterationtimes) ) THEN !! In case number of iterations exceeds initial guess
         CALL DOUBLESIZEARRAY(iterationtimes,aux_array)
     END IF
+
+    CALL CPU_TIME(iterationtime2)
+    iterationtimes(iteration) = iterationtime2 - iterationtime2
 END DO
 CALL CPU_TIME(timeloop2)
 GOTO 530
@@ -226,7 +229,7 @@ CALL CPU_TIME(writetime1)
 WRITE(*,*) 'Writing output files'
 WRITE(*,*) 'L1=', L1(:),'L2=',L2(:),'LINF=',LINF(:)
 WRITE(*,*) (i, saved_results(i,1), i=0,npoints-1)
-WRITE(CFL_str,'(F8.1)') CFL
+WRITE(CFL_str,'(F8.2)') CFL
 print*, 'CFL_str:', CFL_str
 
 print*, 'time_str:',time_str
@@ -301,7 +304,7 @@ END IF
                                 
 CALL CPU_TIME(extime2)
 
-201 FORMAT(2(A3,','),I0,',',F5.2,7(',',ES15.8))
+201 FORMAT(2(A3,','),I0,',',F4.2,7(',',ES15.8))
 WRITE(200,201) scheme,infunction,npoints,CFL,timeloop2-timeloop1,&
     (timeloop2-timeloop1)/iteration,extime2-extime1,writetime2-writetime1,L1(ncontrolTimes),L2(ncontrolTimes),&
     LINF(ncontrolTimes)

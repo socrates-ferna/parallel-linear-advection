@@ -1,14 +1,14 @@
 &input_list
-u=1.0D0                 !u (flux velocity)
-scheme='upw'
-infunction='sgn'
-CFL=1.0D0
-npoints=20
+u=1.5D0                 !u (flux velocity)
+scheme=cnt
+infunction=sgn
+CFL=0.8
+npoints=100
 xl=-40.0D0
 xr=40.0D0
-ncontrolTimes=2
+ncontrolTimes=10
 stopTime=10.0D0
-strandid=1
+strandid=73
 /
 
 

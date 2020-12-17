@@ -17,13 +17,13 @@ MODULE misc_subroutines
         SELECT CASE (schstr) 
             CASE ('upw')
                 schpt => UPWIND 
-                WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spstenc,timestenc
             CASE ('cnt')
                 schpt => CENTRAL
-                WRITE(*,*) 'Chosen scheme is central, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is central, stencilSize=', spstenc,timestenc
             CASE ('lax')
                 schpt => LAX
-                WRITE(*,*) 'Chosen scheme is lax, stencilSize=',spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is lax, stencilSize=',spstenc,timestenc
             CASE ('lpf')
                 timestenc = 2
                 pst = 0
@@ -31,16 +31,16 @@ MODULE misc_subroutines
                 fut = 2
                 logicalinit = .TRUE.
                 schpt => LEAPFROG
-                WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', spstenc,timestenc
             CASE ('lxw')
                 schpt => LAXWENDROFF
-                WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spstenc,timestenc
             CASE ('mcc')
-                WRITE(*,*) 'Chosen scheme is MacCormack'
+                !WRITE(*,*) 'Chosen scheme is MacCormack'
             CASE ('tow')
                 spstenc = 2
                 schpt => THIRDORDERUPWIND
-                WRITE(*,*) 'Chosen scheme is Third Order Upwind', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is Third Order Upwind', spstenc,timestenc
         END SELECT
     END SUBROUTINE SCHEMESELECTION
 
@@ -57,68 +57,53 @@ MODULE misc_subroutines
         END SELECT
     END SUBROUTINE FUNCTIONSELECTION
 
-    SUBROUTINE INITIAL_READ(id,vel,sch,func,courant,dim,leftb,rightb,nwrites,finaltime,strid,buf,pos)
-        INTEGER, INTENT(OUT) :: pos, strid, nwrites, dim
+    SUBROUTINE INITIAL_READ(id,u,scheme,infunction,CFL,npoints,xl,xr,ncontrolTimes,stopTime,strandid,pack_buf,position)
+        INTEGER, INTENT(OUT) :: position, strandid, ncontrolTimes, npoints
         INTEGER :: ierr, id, status
-	CHARACTER(300) :: msg
-        CHARACTER(*) :: buf
-        CHARACTER(*), INTENT(OUT) :: sch, func
-        REAL(KIND=8) :: vel, courant, leftb, rightb, finaltime
-
+	    CHARACTER(300) :: msg
+        CHARACTER(*) :: pack_buf
+        CHARACTER(15), INTENT(OUT) :: scheme, infunction
+        REAL(KIND=8) :: u, CFL, xl, xr, stopTime
+        NAMELIST / input_list / u, scheme, infunction, CFL, npoints, xl, xr, ncontrolTimes, stopTime, strandid
         IF (id == 0) THEN
-            OPEN(UNIT=1,FILE='input.ini',STATUS='old', ACTION='READ', IOSTAT=status,IOMSG=msg)
-            READ(1,'(2X,F10.3)') vel
-            CALL MPI_PACK(vel,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(7X,A15)') sch
-            CALL MPI_PACK(sch,15,MPI_CHARACTER,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(11X,A15)') func
-            CALL MPI_PACK(func,15,MPI_CHARACTER,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(4X,F7.4)') courant
-            CALL MPI_PACK(courant,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(8X,I6)') dim
-            CALL MPI_PACK(dim,1,MPI_INTEGER,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(3X,F10.3)') leftb
-            CALL MPI_PACK(leftb,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(3X,F10.3)') rightb
-            CALL MPI_PACK(rightb,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(14X,I3)') nwrites
-            CALL MPI_PACK(nwrites,1,MPI_INTEGER,buf,300,pos,MPI_COMM_WORLD,ierr)
-        
-            READ(1,'(9X,F10.3)') finaltime
-            CALL MPI_PACK(finaltime,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
-            READ(1,'(9X,I3)') strid !!! External simulation numbering system to group saved times properly when writing tecplot files
-        
+
+            OPEN(UNIT=1,FILE='input.nml',STATUS='old', ACTION='READ', IOSTAT=status,IOMSG=msg)
+            READ(UNIT=1, NML=input_list)
             CLOSE(1)
+
+            CALL MPI_PACK(u,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(scheme,15,MPI_CHARACTER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(infunction,15,MPI_CHARACTER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(CFL,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(npoints,1,MPI_INTEGER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(xl,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(xr,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(ncontrolTimes,1,MPI_INTEGER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
+            CALL MPI_PACK(stopTime,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
         
-            CALL MPI_BCAST(buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
+            CALL MPI_BCAST(pack_buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
         
         ELSE
-            CALL MPI_BCAST(buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
-            CALL MPI_UNPACK(buf,300,pos,vel,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives u ',vel
-            CALL MPI_UNPACK(buf,300,pos,sch,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives scheme ',sch
-            CALL MPI_UNPACK(buf,300,pos,func,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives infunction ',func
-            CALL MPI_UNPACK(buf,300,pos,courant,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives CFL ',courant
-            CALL MPI_UNPACK(buf,300,pos,dim,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives npoints ',dim
-            CALL MPI_UNPACK(buf,300,pos,leftb,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives leftb ',leftb
-            CALL MPI_UNPACK(buf,300,pos,rightb,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives rightb ',rightb
-            CALL MPI_UNPACK(buf,300,pos,nwrites,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-            !WRITE(*,*) 'Proc',id,'receives ncontrolTimes',nwrites
-            CALL MPI_UNPACK(buf,200,pos,finaltime,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            CALL MPI_BCAST(pack_buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
+            CALL MPI_UNPACK(pack_buf,300,position,u,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives u ',u
+            CALL MPI_UNPACK(pack_buf,300,position,scheme,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives scheme ',scheme
+            CALL MPI_UNPACK(pack_buf,300,position,infunction,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives infunction ',infunction
+            CALL MPI_UNPACK(pack_buf,300,position,CFL,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives CFL ',CFL
+            CALL MPI_UNPACK(pack_buf,300,position,npoints,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives npoints ',npoints
+            CALL MPI_UNPACK(pack_buf,300,position,xl,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives xl ',xl
+            CALL MPI_UNPACK(pack_buf,300,position,xr,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives xr ',xr
+            CALL MPI_UNPACK(pack_buf,300,position,ncontrolTimes,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives ncontrolTimes',ncontrolTimes
+            CALL MPI_UNPACK(pack_buf,200,position,stopTime,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
         END IF
+        
         
     END SUBROUTINE INITIAL_READ
 
@@ -179,7 +164,7 @@ MODULE misc_subroutines
                 np = id - 1 ! this process sends info to np
             END IF
             
-            WRITE(*,*) 'Flux goes from right to left'
+            !WRITE(*,*) 'Flux goes from right to left'
             increment = -1
             imsbs = istart            ! "i-1" sent buffer start index
             imsbe = istart + sst - 1  ! "i-1" sent buffer end index
@@ -204,4 +189,16 @@ MODULE misc_subroutines
         END IF
         100 FORMAT(A3,A10,I3,A15,I4,A1,I4)
     END SUBROUTINE FLUXDETERMINATION
+
+    SUBROUTINE DOUBLESIZEARRAY(array, aux_array)
+        REAL(KIND=8), DIMENSION(:), ALLOCATABLE, INTENT(INOUT) :: array
+        REAL(KIND=8), DIMENSION(:), ALLOCATABLE :: aux_array
+        !INTEGER :: d1,d2
+        ALLOCATE(aux_array(2*SIZE(array))); aux_array = 0.0D0
+        aux_array(1:SIZE(array)) = array(:)
+        DEALLOCATE(array)
+        ALLOCATE(array(SIZE(aux_array)))
+        array(:) = aux_array(:)
+        DEALLOCATE(aux_array)
+    END SUBROUTINE DOUBLESIZEARRAY
 END MODULE misc_subroutines

@@ -1,58 +1,57 @@
-IF (id == 0) THEN
-    OPEN(UNIT=1,FILE='input.ini',STATUS='old', ACTION='READ', IOSTAT=status,IOMSG=msg)
-    READ(1,'(2X,F10.3)') u
-    CALL MPI_PACK(u,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(7X,A15)') scheme
-    CALL MPI_PACK(scheme,15,MPI_CHARACTER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(11X,A15)') infunction
-    CALL MPI_PACK(infunction,15,MPI_CHARACTER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(4X,F7.4)') CFL
-    CALL MPI_PACK(CFL,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(8X,I6)') npoints
-    CALL MPI_PACK(npoints,1,MPI_INTEGER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(3X,F10.3)') xl
-    CALL MPI_PACK(xl,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(3X,F10.3)') xr
-    CALL MPI_PACK(xr,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(14X,I3)') ncontrolTimes
-    CALL MPI_PACK(ncontrolTimes,1,MPI_INTEGER,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-
-    READ(1,'(9X,F10.3)') stopTime
-    CALL MPI_PACK(stopTime,1,MPI_DOUBLE_PRECISION,pack_buf,300,position,MPI_COMM_WORLD,ierr)
-    READ(1,'(9X,I3)') strandid !!! External simulation numbering system to group saved times properly when writing tecplot files
-
-    CLOSE(1)
-
-    CALL MPI_BCAST(pack_buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
-
-ELSE
-    CALL MPI_BCAST(pack_buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
-    CALL MPI_UNPACK(pack_buf,300,position,u,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives u ',u
-    CALL MPI_UNPACK(pack_buf,300,position,scheme,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives scheme ',scheme
-    CALL MPI_UNPACK(pack_buf,300,position,infunction,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives infunction ',infunction
-    CALL MPI_UNPACK(pack_buf,300,position,CFL,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives CFL ',CFL
-    CALL MPI_UNPACK(pack_buf,300,position,npoints,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives npoints ',npoints
-    CALL MPI_UNPACK(pack_buf,300,position,xl,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives xl ',xl
-    CALL MPI_UNPACK(pack_buf,300,position,xr,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives xr ',xr
-    CALL MPI_UNPACK(pack_buf,300,position,ncontrolTimes,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
-    !WRITE(*,*) 'Proc',id,'receives ncontrolTimes',ncontrolTimes
-    CALL MPI_UNPACK(pack_buf,200,position,stopTime,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
-END IF
-
+        IF (id == 0) THEN
+            OPEN(UNIT=1,FILE='input.ini',STATUS='old', ACTION='READ', IOSTAT=status,IOMSG=msg)
+            READ(1,'(2X,F10.3)') vel
+            CALL MPI_PACK(vel,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(7X,A15)') sch
+            CALL MPI_PACK(sch,15,MPI_CHARACTER,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(11X,A15)') func
+            CALL MPI_PACK(func,15,MPI_CHARACTER,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(4X,F7.4)') courant
+            CALL MPI_PACK(courant,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(8X,I6)') dim
+            CALL MPI_PACK(dim,1,MPI_INTEGER,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(3X,F10.3)') leftb
+            CALL MPI_PACK(leftb,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(3X,F10.3)') rightb
+            CALL MPI_PACK(rightb,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(14X,I3)') nwrites
+            CALL MPI_PACK(nwrites,1,MPI_INTEGER,buf,300,pos,MPI_COMM_WORLD,ierr)
+        
+            READ(1,'(9X,F10.3)') finaltime
+            CALL MPI_PACK(finaltime,1,MPI_DOUBLE_PRECISION,buf,300,pos,MPI_COMM_WORLD,ierr)
+            READ(1,'(9X,I3)') strid !!! External simulation numbering system to group saved times properly when writing tecplot files
+        
+            CLOSE(1)
+        
+            CALL MPI_BCAST(buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
+        
+        ELSE
+            CALL MPI_BCAST(buf,300,MPI_PACKED,0,MPI_COMM_WORLD,ierr)
+            CALL MPI_UNPACK(buf,300,pos,vel,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives u ',vel
+            CALL MPI_UNPACK(buf,300,pos,sch,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives scheme ',sch
+            CALL MPI_UNPACK(buf,300,pos,func,15,MPI_CHARACTER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives infunction ',func
+            CALL MPI_UNPACK(buf,300,pos,courant,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives CFL ',courant
+            CALL MPI_UNPACK(buf,300,pos,dim,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives npoints ',dim
+            CALL MPI_UNPACK(buf,300,pos,leftb,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives leftb ',leftb
+            CALL MPI_UNPACK(buf,300,pos,rightb,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives rightb ',rightb
+            CALL MPI_UNPACK(buf,300,pos,nwrites,1,MPI_INTEGER,MPI_COMM_WORLD,ierr)
+            !WRITE(*,*) 'Proc',id,'receives ncontrolTimes',nwrites
+            CALL MPI_UNPACK(buf,200,pos,finaltime,1,MPI_DOUBLE_PRECISION,MPI_COMM_WORLD,ierr)
+        END IF
 
 
 SELECT CASE (infunction)

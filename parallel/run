@@ -1,0 +1,36 @@
+#!bin/bash
+#Batch run of wave equation simulations
+func="sgn exp"
+schemes="upw"
+CFL="0.1 1"
+npoints="100 6400"
+nprocs="4 8"
+((m=1))
+sed -i "s/ncontrolTimes=.*/ncontrolTimes=4/" input.nml
+
+for i in $func;do
+    mkdir $i
+    sed -i "s/infunction=.*/infunction=$i/" input.nml
+    for j in $schemes;do
+        mkdir $i/$j
+        sed -i "s/scheme=.*/scheme=$j/" input.nml
+        for k in $CFL;do
+            sed -i "s/CFL=.*/CFL=$k/" input.nml
+            for l in $npoints;do
+		echo "simulating $l points"
+                sed -i "s/npoints=.*/npoints=$l/" input.nml
+		for n in $nprocs;do
+			sed -i   "s/strandid=.*/strandid=$m/" input.nml
+			if [[ ! -d "$i/$j/$n" ]]
+                	then
+				mkdir $i/$j/$n
+			fi
+			mpirun -n $n ./a.out > /dev/null #discards all stdout (WRITE(*,) inside fortran)
+                	mv *.dat $i/$j/$n
+                	mv norms* $i/$j/$n
+			((m= m + 1))
+		done
+            done
+        done
+    done
+done

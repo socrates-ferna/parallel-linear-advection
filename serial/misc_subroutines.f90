@@ -17,13 +17,13 @@ MODULE misc_subroutines
         SELECT CASE (schstr) 
             CASE ('upw')
                 schpt => UPWIND 
-                WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is upwind, stencilSize=', spstenc,timestenc
             CASE ('cnt')
                 schpt => CENTRAL
-                WRITE(*,*) 'Chosen scheme is central, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is central, stencilSize=', spstenc,timestenc
             CASE ('lax')
                 schpt => LAX
-                WRITE(*,*) 'Chosen scheme is lax, stencilSize=',spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is lax, stencilSize=',spstenc,timestenc
             CASE ('lpf')
                 timestenc = 2
                 pst = 0
@@ -31,16 +31,16 @@ MODULE misc_subroutines
                 fut = 2
                 logicalinit = .TRUE.
                 schpt => LEAPFROG
-                WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is leapfrog, stencilSize=', spstenc,timestenc
             CASE ('lxw')
                 schpt => LAXWENDROFF
-                WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is lax, stencilSize=', spstenc,timestenc
             CASE ('mcc')
-                WRITE(*,*) 'Chosen scheme is MacCormack'
+                !WRITE(*,*) 'Chosen scheme is MacCormack'
             CASE ('tow')
                 spstenc = 2
                 schpt => THIRDORDERUPWIND
-                WRITE(*,*) 'Chosen scheme is Third Order Upwind', spstenc,timestenc
+                !WRITE(*,*) 'Chosen scheme is Third Order Upwind', spstenc,timestenc
         END SELECT
     END SUBROUTINE SCHEMESELECTION
 
