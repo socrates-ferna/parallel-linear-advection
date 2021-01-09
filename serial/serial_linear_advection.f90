@@ -219,23 +219,23 @@ DO j = 1, ncontrolTimes
 
     CALL NORMS(error_array(:,j),L1(j),L2(j),LINF(j))
 
-    PRINT*,'PROC',id,'L1',L1(j),'L2',L2(j),'LINF',LINF(j)
-    WRITE(*,'(A5,I1, /,(2I3,3(A1,F5.1)))') 'PROC:',id,&
-            (id, i, 'a',analytical_res(i,j),'e',error_array(i,j),'f',phi(i,present), i=0,npoints-1)
+    !PRINT*,'PROC',id,'L1',L1(j),'L2',L2(j),'LINF',LINF(j)
+    !WRITE(*,'(A5,I1, /,(2I3,3(A1,F5.1)))') 'PROC:',id,&
+    !        (id, i, 'a',analytical_res(i,j),'e',error_array(i,j),'f',phi(i,present), i=0,npoints-1)
         
 END DO
 
 CALL CPU_TIME(writetime1)
-WRITE(*,*) 'Writing output files'
-WRITE(*,*) 'L1=', L1(:),'L2=',L2(:),'LINF=',LINF(:)
-WRITE(*,*) (i, saved_results(i,1), i=0,npoints-1)
+!WRITE(*,*) 'Writing output files'
+!WRITE(*,*) 'L1=', L1(:),'L2=',L2(:),'LINF=',LINF(:)
+!WRITE(*,*) (i, saved_results(i,1), i=0,npoints-1)
 WRITE(CFL_str,'(F8.2)') CFL
-print*, 'CFL_str:', CFL_str
+!print*, 'CFL_str:', CFL_str
 
-print*, 'time_str:',time_str
+!print*, 'time_str:',time_str
 
 WRITE(npoints_str,'(I15)') npoints
-print*, 'npoints_str:', npoints_str
+!print*, 'npoints_str:', npoints_str
 WRITE(aux_str,'(A15)') npoints_str
 aux_str=ADJUSTL(aux_str)
 i1 = INDEX(aux_str,' ') - 1
@@ -270,7 +270,7 @@ DO j=1,ncontrolTimes !WE WRITE ONE TECPLOT-ASCII FILE FOR EVERY SAVED INSTANT
     npoints_str= TRIM(ADJUSTL(npoints_str))
     format2_str= "(A2," // aux_str(1:i1) // ",A30,I0,A15,F6.2)"
     WRITE(100,format2_str) 'I=', npoints_str, ', DATAPACKING=POINT, STRANDID=',strandid,', SOLUTIONTIME=',controlTimes(j)
-    PRINT*, 'HEADER WRITTEN WITHOUT ERRORS'
+    !PRINT*, 'HEADER WRITTEN WITHOUT ERRORS'
     444 FORMAT(4(ES14.7,1X))
 
     WRITE(100,444) (x(i),analytical_res(i,j), saved_results(i,j), error_array(i,j), i = 0,npoints-1)
@@ -299,15 +299,15 @@ IF(fileexist) THEN
     OPEN(UNIT=200,FILE='times.csv',STATUS='OLD',ACTION='WRITE',POSITION='APPEND',IOSTAT=status,IOMSG=msg)
 ELSE
     OPEN(UNIT=200,FILE='times.csv',STATUS='NEW',ACTION='WRITE',POSITION='APPEND',IOSTAT=status,IOMSG=msg)
-    WRITE(200,*) "scheme,function,npoints,CFL,do-time,itavgtime,extime,writetime,L1,L2,LINF"
+    WRITE(200,*) "scheme,function,npoints,CFL,do-time,itavgtime,extime,writetime,L1,L2,LINF,L1_m,L2_m,LINF_m"
 END IF
                                 
 CALL CPU_TIME(extime2)
 
-201 FORMAT(2(A3,','),I0,',',F4.2,7(',',ES15.8))
+201 FORMAT(2(A3,','),I0,',',F4.2,10(',',ES15.8))
 WRITE(200,201) scheme,infunction,npoints,CFL,timeloop2-timeloop1,&
     (timeloop2-timeloop1)/iteration,extime2-extime1,writetime2-writetime1,L1(ncontrolTimes),L2(ncontrolTimes),&
-    LINF(ncontrolTimes)
+    LINF(ncontrolTimes),L1(ncontrolTimes/2),L2(ncontrolTimes/2),LINF(ncontrolTimes/2)
 CLOSE(200)
 
 CALL CPU_TIME(extime2)

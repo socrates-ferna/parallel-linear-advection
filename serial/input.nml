@@ -1,14 +1,14 @@
 &input_list
 u=1.5D0                 !u (flux velocity)
-scheme=cnt
-infunction=sgn
-CFL=0.8
-npoints=100
+scheme=lax
+infunction=exp
+CFL=0.9996
+npoints=6400
 xl=-40.0D0
 xr=40.0D0
-ncontrolTimes=10
+ncontrolTimes=4
 stopTime=10.0D0
-strandid=73
+strandid=64
 /
 
 

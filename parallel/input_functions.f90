@@ -85,7 +85,7 @@ CONTAINS
         REAL(KIND=8), INTENT(IN), DIMENSION(:) :: error_array
         REAL(KIND=8), INTENT(OUT) :: L1,L2,LINF
         
-        L1 = SUM(error_array)
+        L1 = SUM(ABS(error_array))
         L2 = DSQRT(SUM(error_array**2)) !! Fortran also offers the intrinsic function NORM2()
         LINF = MAXVAL(DABS(error_array))
     END SUBROUTINE NORMS

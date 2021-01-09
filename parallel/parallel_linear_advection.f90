@@ -118,7 +118,7 @@ sendsize = SIZE(phi(istart:iend,present)) !Local number of points,  needed for s
 CALL MPI_GATHER(sendsize,1,MPI_INTEGER,ssizes,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 
 IF(id == 0) THEN
-    PRINT*,ssizes
+    !PRINT*,ssizes
     ALLOCATE(displacements(0:commsize-1)) ! FOR MPI_GATHERV
     ALLOCATE(x_tot(0:npoints-1))
 
@@ -127,7 +127,7 @@ IF(id == 0) THEN
         displacements(i) = ssizes(i-1) + displacements(i-1)
     END DO
 
-    PRINT*, displacements
+    !PRINT*, displacements
 
     DO i=0,npoints-1
         x_tot(i) = xl + i*dx !Proc 0 needs to initialise the whole domain to receive and write results
@@ -200,7 +200,7 @@ END SELECT
 
 529 CONTINUE
 timeloop2 = MPI_WTIME()
-PRINT*, id,'Out of the time loop in',iteration,'iterations'
+!PRINT*, id,'Out of the time loop in',iteration,'iterations'
 avgtimeloop = (timeloop2 - timeloop1) / iteration
 avgcomm = SUM(commtime) / iteration !!all procs sum their contribs in REDUCE
 GOTO 530
@@ -392,7 +392,7 @@ GOTO 529
 ! GATHERING DATA AND WRITING OUTPUT
 
 
-print*, 'started writing'
+!print*, 'started writing'
 IF (id == 0) THEN
     ALLOCATE(receive_arr(0:npoints-1,ncontrolTimes))
     ALLOCATE(r_err(0:npoints-1,ncontrolTimes))
@@ -514,13 +514,14 @@ IF (id == 0) THEN
         OPEN(UNIT=200,FILE='times.csv',STATUS='NEW',ACTION='WRITE',POSITION='APPEND',IOSTAT=status,IOMSG=msg)
         
         WRITE(200,'(A28,A93)') "scheme,function,npoints,CFL,",&
-        "iterations,nprocs,do-time,itavgtime,itstdev,commavgtime,commstdev,extime,writetime,L1,L2,LINF"
+     "iterations,nprocs,do-time,itavgtime,itstdev,commavgtime,commstdev,extime,writetime,L1,L2,LINF,L1_m,L2_m,LINF_m"
     END IF
     extime2 = MPI_WTIME()
-    201 FORMAT(2(A3,','),I0,',',F4.2,',',I0,',',I0,10(',',ES15.8))
+    201 FORMAT(2(A3,','),I0,',',F4.2,',',I0,',',I0,13(',',ES15.8))
     WRITE(200,201) scheme,infunction,npoints,CFL,iteration,commsize,timeloopavg*iteration,&
         timeloopavg,timeloopstdev,commavg,commstdev,extime2-extime1, writetime2-writetime1,&
-        L1_tot(ncontrolTimes),L2_tot(ncontrolTimes),LINF_overall(ncontrolTimes)
+        L1_tot(ncontrolTimes),L2_tot(ncontrolTimes),LINF_overall(ncontrolTimes),L1_tot(ncontrolTimes/2),&
+        L2_tot(ncontrolTimes/2),LINF_overall(ncontrolTimes/2)
     CLOSE(200)
 
 

@@ -1,10 +1,10 @@
 #!bin/bash
 #Batch run of wave equation simulations
 func="sgn exp"
-schemes="upw"
-CFL="0.1 1"
-npoints="100 6400"
-nprocs="4 8"
+schemes="upw lax mcc"
+CFL="0.996 0.5"
+npoints="6400 100000"
+nprocs="2 4 8 16 32 64"
 ((m=1))
 sed -i "s/ncontrolTimes=.*/ncontrolTimes=4/" input.nml
 

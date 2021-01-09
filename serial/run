@@ -1,26 +1,29 @@
 #!bin/bash
 #Batch run of wave equation simulations
 func="sgn exp"
-schemes="upw cnt lax lxw tow mcc"
-CFL="0.01 0.05 0.1 0.3 0.5 0.8 1"
-npoints="100 200 800 1600 6400 100000"
+schemes1="upw cnt lax lxw mcc"
+schemes2="upw lax mcc tow"
+CFL1="0.5"
+CFL2="0.1 0.9996"
+npoints1="200 800 1600 6400"
+npoints2="200 6400"
 #nprocs="2 4 8 16 32 64"
 ((m=1))
-sed -i "s/ncontrolTimes=.*/ncontrolTimes=10/" input.nml
+sed -i "s/ncontrolTimes=.*/ncontrolTimes=4/" input.nml
 
 for i in $func;do
     mkdir $i
     sed -i "s/infunction=.*/infunction=$i/" input.nml
-    for j in $schemes;do
+    for j in $schemes1;do
         mkdir $i/$j
         sed -i "s/scheme=.*/scheme=$j/" input.nml
-        for k in $CFL;do
+        for k in $CFL1;do
             sed -i "s/CFL=.*/CFL=$k/" input.nml
-            for l in $npoints;do
+            for l in $npoints1;do
 		echo "simulating $l points"
                 sed -i "s/npoints=.*/npoints=$l/" input.nml
 		sed -i   "s/strandid=.*/strandid=$m/" input.nml
-                ./a.out > /dev/null #discards all stdout (WRITE(*,) inside fortran)
+                ./a.out # if >> /dev/null discards all stdout (WRITE(*,) inside fortran)
                 mv *.dat $i/$j
                 mv norms* $i/$j
 		((m= m + 1))
@@ -28,3 +31,26 @@ for i in $func;do
         done
     done
 done
+
+for i in $func;do
+    sed -i "s/infunction=.*/infunction=$i/" input.nml
+    for j in $schemes2;do
+        if [[ ! -d "$i/$j" ]]; then
+	    mkdir $i/$j
+        fi 
+        sed -i "s/scheme=.*/scheme=$j/" input.nml
+        for k in $CFL2;do
+            sed -i "s/CFL=.*/CFL=$k/" input.nml
+            for l in $npoints2;do
+                echo "simulating $l points"
+                sed -i "s/npoints=.*/npoints=$l/" input.nml
+                sed -i   "s/strandid=.*/strandid=$m/" input.nml
+                ./a.out 
+                mv *.dat $i/$j
+                mv norms* $i/$j
+                ((m= m + 1))
+            done
+        done
+    done
+done
+
