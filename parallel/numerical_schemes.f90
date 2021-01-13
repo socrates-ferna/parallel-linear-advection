@@ -51,7 +51,7 @@ IMPLICIT NONE
         !REAL, INTENT(IN), DIMENSION(:) :: grid
         REAL(KIND=8), INTENT(IN) :: spacing, tstep, vel
         DO i = start, end
-            f(i,fut) =  0.5D0 * (f(i+inc,pres) - f(i-inc,pres)) - vel*tstep/(2*spacing) * (f(i+inc,pres) - f(i-inc,pres))
+            f(i,fut) =  0.5D0 * (f(i+inc,pres) + f(i-inc,pres)) - vel*tstep/(2*spacing) * (f(i+inc,pres) - f(i-inc,pres))
         END DO
 
     END SUBROUTINE LAX

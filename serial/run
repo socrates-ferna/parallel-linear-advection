@@ -1,14 +1,14 @@
 #!bin/bash
 #Batch run of wave equation simulations
 func="sgn exp"
-schemes1="upw cnt lax lxw mcc"
-schemes2="upw lax mcc tow"
+schemes1="lax mcc"
+schemes2="lax mcc"
 CFL1="0.5"
 CFL2="0.1 0.9996"
 npoints1="200 800 1600 6400"
 npoints2="200 6400"
 #nprocs="2 4 8 16 32 64"
-((m=1))
+((m=75))
 sed -i "s/ncontrolTimes=.*/ncontrolTimes=4/" input.nml
 
 for i in $func;do
@@ -24,6 +24,7 @@ for i in $func;do
                 sed -i "s/npoints=.*/npoints=$l/" input.nml
 		sed -i   "s/strandid=.*/strandid=$m/" input.nml
                 ./a.out # if >> /dev/null discards all stdout (WRITE(*,) inside fortran)
+		sleep 10
                 mv *.dat $i/$j
                 mv norms* $i/$j
 		((m= m + 1))
@@ -46,6 +47,7 @@ for i in $func;do
                 sed -i "s/npoints=.*/npoints=$l/" input.nml
                 sed -i   "s/strandid=.*/strandid=$m/" input.nml
                 ./a.out 
+		sleep 10
                 mv *.dat $i/$j
                 mv norms* $i/$j
                 ((m= m + 1))

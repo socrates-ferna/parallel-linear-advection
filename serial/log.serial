@@ -11,7 +11,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           1
  /
- Total execution time* is:   1.418300000000000E-002
+ Total execution time* is:   3.882000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -25,7 +25,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           2
  /
- Total execution time* is:   2.981100000000000E-002
+ Total execution time* is:   8.566000000000001E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -39,7 +39,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           3
  /
- Total execution time* is:   6.719100000000000E-002
+ Total execution time* is:   1.085300000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -53,7 +53,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           4
  /
- Total execution time* is:   0.596633000000000     
+ Total execution time* is:   4.834500000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -67,7 +67,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           5
  /
- Total execution time* is:   1.408900000000000E-002
+ Total execution time* is:   4.657000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -81,7 +81,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           6
  /
- Total execution time* is:   3.094800000000000E-002
+ Total execution time* is:   8.189999999999999E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -95,7 +95,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           7
  /
- Total execution time* is:   6.770400000000000E-002
+ Total execution time* is:   1.583300000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -109,7 +109,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           8
  /
- Total execution time* is:   0.620694000000000     
+ Total execution time* is:   5.691200000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -123,7 +123,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =           9
  /
- Total execution time* is:   1.055100000000000E-002
+ Total execution time* is:   1.574000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -137,7 +137,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          10
  /
- Total execution time* is:   3.286900000000000E-002
+ Total execution time* is:   5.747000000000000E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -151,7 +151,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          11
  /
- Total execution time* is:   7.644200000000000E-002
+ Total execution time* is:   1.803600000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -165,7 +165,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          12
  /
- Total execution time* is:   0.720242000000000     
+ Total execution time* is:   4.948000000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -179,7 +179,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          13
  /
- Total execution time* is:   1.213100000000000E-002
+ Total execution time* is:   1.586000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -193,7 +193,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          14
  /
- Total execution time* is:   3.435400000000000E-002
+ Total execution time* is:   5.619000000000000E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -207,7 +207,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          15
  /
- Total execution time* is:   9.466200000000001E-002
+ Total execution time* is:   1.176100000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -221,7 +221,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          16
  /
- Total execution time* is:   0.942594000000000     
+ Total execution time* is:   6.099599999999999E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -235,7 +235,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          17
  /
- Total execution time* is:   9.807000000000000E-003
+ Total execution time* is:   1.576000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -249,7 +249,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          18
  /
- Total execution time* is:   4.573700000000000E-002
+ Total execution time* is:   5.620000000000000E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -263,7 +263,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          19
  /
- Total execution time* is:   0.119653000000000     
+ Total execution time* is:   1.148100000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -277,7 +277,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          20
  /
- Total execution time* is:    1.76984600000000     
+ Total execution time* is:   5.679100000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -291,7 +291,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          21
  /
- Total execution time* is:   9.197000000000000E-003
+ Total execution time* is:   3.951000000000001E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -305,7 +305,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          22
  /
- Total execution time* is:   3.176700000000000E-002
+ Total execution time* is:   5.686000000000000E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -319,7 +319,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          23
  /
- Total execution time* is:   7.328200000000000E-002
+ Total execution time* is:   1.373300000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -333,7 +333,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          24
  /
- Total execution time* is:   0.603476000000000     
+ Total execution time* is:   4.993500000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -347,7 +347,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          25
  /
- Total execution time* is:   1.443200000000000E-002
+ Total execution time* is:   5.092000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -361,7 +361,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          26
  /
- Total execution time* is:   3.731499999999999E-002
+ Total execution time* is:   1.156700000000000E-002
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -375,7 +375,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          27
  /
- Total execution time* is:   7.355800000000000E-002
+ Total execution time* is:   1.161300000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -389,7 +389,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          28
  /
- Total execution time* is:   0.620664000000000     
+ Total execution time* is:   5.150800000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -403,7 +403,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          29
  /
- Total execution time* is:   1.425800000000000E-002
+ Total execution time* is:   1.682000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -417,7 +417,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          30
  /
- Total execution time* is:   3.164000000000000E-002
+ Total execution time* is:   5.769000000000000E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -431,7 +431,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          31
  /
- Total execution time* is:   7.653900000000000E-002
+ Total execution time* is:   1.208500000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -445,7 +445,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          32
  /
- Total execution time* is:   0.679715000000000     
+ Total execution time* is:   5.060500000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -459,7 +459,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          33
  /
- Total execution time* is:   1.467800000000000E-002
+ Total execution time* is:   1.639000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -473,7 +473,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          34
  /
- Total execution time* is:   3.594800000000000E-002
+ Total execution time* is:   5.894999999999999E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -487,7 +487,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          35
  /
- Total execution time* is:   8.713000000000000E-002
+ Total execution time* is:   1.210100000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -501,7 +501,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          36
  /
- Total execution time* is:    1.14087100000000     
+ Total execution time* is:   6.255100000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -515,7 +515,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          37
  /
- Total execution time* is:   1.230100000000000E-002
+ Total execution time* is:   1.644000000000000E-003
 simulating 800 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -529,7 +529,7 @@ simulating 800 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          38
  /
- Total execution time* is:   4.064700000000000E-002
+ Total execution time* is:   5.785000000000000E-003
 simulating 1600 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -543,7 +543,7 @@ simulating 1600 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          39
  /
- Total execution time* is:   0.118921000000000     
+ Total execution time* is:   1.175800000000000E-002
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -557,7 +557,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          40
  /
- Total execution time* is:    1.77807600000000     
+ Total execution time* is:   5.875900000000001E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -571,7 +571,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          41
  /
- Total execution time* is:   1.383100000000000E-002
+ Total execution time* is:   1.880000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -585,7 +585,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          42
  /
- Total execution time* is:    2.33629200000000     
+ Total execution time* is:   8.929900000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -599,7 +599,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          43
  /
- Total execution time* is:   1.287000000000000E-002
+ Total execution time* is:   1.464000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -613,7 +613,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          44
  /
- Total execution time* is:   0.377243000000000     
+ Total execution time* is:   4.263500000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -627,7 +627,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          45
  /
- Total execution time* is:   1.339600000000000E-002
+ Total execution time* is:   1.914000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -641,7 +641,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          46
  /
- Total execution time* is:    4.33383400000000     
+ Total execution time* is:   0.104942000000000     
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -655,7 +655,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          47
  /
- Total execution time* is:   1.881800000000000E-002
+ Total execution time* is:   1.508000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -669,7 +669,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          48
  /
- Total execution time* is:   0.430359000000000     
+ Total execution time* is:   4.337900000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -683,7 +683,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          49
  /
- Total execution time* is:   1.742500000000000E-002
+ Total execution time* is:   2.039000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -697,7 +697,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          50
  /
- Total execution time* is:    6.31919600000000     
+ Total execution time* is:   0.132554000000000     
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -711,7 +711,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          51
  /
- Total execution time* is:   7.185000000000000E-003
+ Total execution time* is:   1.511000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -725,7 +725,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          52
  /
- Total execution time* is:   0.729682000000000     
+ Total execution time* is:   4.686600000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -739,7 +739,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          53
  /
- Total execution time* is:   1.711300000000000E-002
+ Total execution time* is:   2.056000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -753,7 +753,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          54
  /
- Total execution time* is:    3.79727800000000     
+ Total execution time* is:   0.240144000000000     
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -767,7 +767,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          55
  /
- Total execution time* is:   1.339500000000000E-002
+ Total execution time* is:   3.569000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -781,7 +781,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          56
  /
- Total execution time* is:   0.510393000000000     
+ Total execution time* is:   5.861600000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -795,7 +795,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          57
  /
- Total execution time* is:   1.429900000000000E-002
+ Total execution time* is:   1.987000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -809,7 +809,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          58
  /
- Total execution time* is:    2.68146800000000     
+ Total execution time* is:   9.155800000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -823,7 +823,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          59
  /
- Total execution time* is:   1.423100000000000E-002
+ Total execution time* is:   1.540000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -837,7 +837,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          60
  /
- Total execution time* is:   0.383664000000000     
+ Total execution time* is:   4.466199999999999E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -851,7 +851,7 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          61
  /
- Total execution time* is:   1.508400000000000E-002
+ Total execution time* is:   1.961000000000000E-003
 simulating 6400 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -865,7 +865,7 @@ simulating 6400 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          62
  /
- Total execution time* is:    5.44300900000000     
+ Total execution time* is:   9.847300000000000E-002
 simulating 200 points
  &INPUT_LIST
  U       =   1.50000000000000     ,
@@ -879,5 +879,130 @@ simulating 200 points
  STOPTIME        =   10.0000000000000     ,
  STRANDID        =          63
  /
- Total execution time* is:   1.828200000000000E-002
+ Total execution time* is:   1.573000000000000E-003
 simulating 6400 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = lax            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.999600000000000     ,
+ NPOINTS =        6400,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          64
+ /
+ Total execution time* is:   4.520600000000000E-002
+simulating 200 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = mcc            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.100000000000000     ,
+ NPOINTS =         200,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          65
+ /
+ Total execution time* is:   2.005000000000000E-003
+simulating 6400 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = mcc            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.100000000000000     ,
+ NPOINTS =        6400,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          66
+ /
+ Total execution time* is:   0.135146000000000     
+simulating 200 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = mcc            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.999600000000000     ,
+ NPOINTS =         200,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          67
+ /
+ Total execution time* is:   1.585000000000000E-003
+simulating 6400 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = mcc            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.999600000000000     ,
+ NPOINTS =        6400,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          68
+ /
+ Total execution time* is:   4.857900000000000E-002
+simulating 200 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = tow            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.100000000000000     ,
+ NPOINTS =         200,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          69
+ /
+ Total execution time* is:   2.138000000000000E-003
+simulating 6400 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = tow            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.100000000000000     ,
+ NPOINTS =        6400,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          70
+ /
+ Total execution time* is:   0.243146000000000     
+simulating 200 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = tow            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.999600000000000     ,
+ NPOINTS =         200,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          71
+ /
+ Total execution time* is:   1.608000000000000E-003
+simulating 6400 points
+ &INPUT_LIST
+ U       =   1.50000000000000     ,
+ SCHEME  = tow            ,
+ INFUNCTION      = exp            ,
+ CFL     =  0.999600000000000     ,
+ NPOINTS =        6400,
+ XL      =  -40.0000000000000     ,
+ XR      =   40.0000000000000     ,
+ NCONTROLTIMES   =           4,
+ STOPTIME        =   10.0000000000000     ,
+ STRANDID        =          72
+ /
+ Total execution time* is:   6.068700000000000E-002

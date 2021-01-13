@@ -1,14 +1,14 @@
 &input_list
-u=1.0D0                 !u (flux velocity)
-scheme=upw
+u=1.5D0                 !u (flux velocity)
+scheme=mcc
 infunction=exp
-CFL=1
+CFL=0.5
 npoints=6400
 xl=-40.0D0
 xr=40.0D0
-ncontrolTimes=4
+ncontrolTimes=2
 stopTime=10.0D0
-strandid=16
+strandid=9
 /
 
 

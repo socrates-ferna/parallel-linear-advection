@@ -1,0 +1,1 @@
+for f in *.dat; do mv exp_upw_0.1_6400_7.50.dat exp_upw_0.1_6400_7.50_8.dat; done

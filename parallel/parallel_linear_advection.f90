@@ -9,8 +9,8 @@ USE misc_subroutines
 !
 ! Licence: This code is distributed under GNU GPL Licence
 ! Author: Sócrates Fernández Fernández, s(dot)fernaferna(at)gmail(dot)com
-! GitHub: socrates-ferna
-! LAST MOD: 14/12/2020
+! GitHub: socrates-ferna/parallel-linear-advection
+! LAST MOD: 13/01/2021
 !-----------------------------------------------------------------------
 ! COMMENTS
 ! -I leave several WRITEs throughout the code to facilitate the user the retrieval of info when investigating how the code works
@@ -363,7 +363,7 @@ DO
     commtime2 = MPI_WTIME()
     cumcommtime = cumcommtime + commtime2 - commtime1
     DO i=correctorstart,correctorend,-increment !!this doesn't work with reverse flow, just as the rest of the loop
-        phi(i,future) = 0.5D0*(phi(i,present) + phi(i,future)) - absu*dt/dx*(phi(i,future) - phi(i-increment,future))
+        phi(i,future) = 0.5D0*(phi(i,present) + phi(i,future) - absu*dt/dx*(phi(i,future) - phi(i-increment,future)))
     END DO !Thanks to computing the subarray in reverse direction we can avoid using an extra array to store the predictor
 
     IF(id == 0) phi(istart,future)=phi(istart-1,future)  !!Simple way to ensure that f(-40,t) = original BC
@@ -498,7 +498,7 @@ IF (id == 0) THEN
     OPEN(UNIT=101,FILE=filename,STATUS='NEW', ACTION='WRITE',IOSTAT=status,IOMSG=msg)
     WRITE(101,'(A12)') 't,L1,L2,LINF' !File header
 
-    102 FORMAT(4(F9.5,','))
+    102 FORMAT(4(ES13.5,','))
     DO j = 1, ncontrolTimes
         WRITE(101,102) controlTimes(j),L1_tot(j),L2_tot(j),LINF_overall(j)
     END DO
@@ -513,7 +513,7 @@ IF (id == 0) THEN
     ELSE
         OPEN(UNIT=200,FILE='times.csv',STATUS='NEW',ACTION='WRITE',POSITION='APPEND',IOSTAT=status,IOMSG=msg)
         
-        WRITE(200,'(A28,A93)') "scheme,function,npoints,CFL,",&
+        WRITE(200,'(A28,A110)') "scheme,function,npoints,CFL,",&
      "iterations,nprocs,do-time,itavgtime,itstdev,commavgtime,commstdev,extime,writetime,L1,L2,LINF,L1_m,L2_m,LINF_m"
     END IF
     extime2 = MPI_WTIME()

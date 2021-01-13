@@ -1,0 +1,156 @@
+#!/bin/bash
+##
+## MPI submission script for PBS on CRESCENT
+## -----------------------------------------
+##
+## Follow the 6 steps below to configure your job
+## 
+## STEP 1:
+##
+## Enter a job name after the -N on the line below:
+##
+PBS -N s319791-16cpus
+##
+## STEP 2:
+##
+## Select the number of cpus/cores required by modifying the #PBS -l select line below
+##
+## Normally you select cpus in chunks of 16 cpus
+## The Maximum value for ncpus is 16 and mpiprocs MUST be the same value as ncpus.
+##
+## If more than 16 cpus are required then select multiple chunks of 16
+## e.g.	16 CPUs: select=1:ncpus=16:mpiprocs=16
+##	32 CPUs: select=2:ncpus=16:mpiprocs=16
+##	48 CPUs: select=3:ncpus=16:mpiprocs=16
+##	..etc..
+##
+PBS -l select=1:ncpus=16:mpiprocs=16
+##
+## STEP 3:
+##
+## Select the correct queue by modifying the #PBS -q line below
+##
+## half_hour	-  30 minutes
+## one_hour	-   1 hour
+## three_hour   -   3 hours
+## six_hour     -   6 hours
+## half_day	-  12 hours
+## one_day	-  24 hours
+## two_day	-  48 hours
+## five_day	- 120 hours
+## ten_day	- 240 hours (by special arrangement)
+##
+PBS -q half_hour
+##
+## STEP 4:
+##
+## Replace the hpc@cranfield.ac.uk email address
+## with your Cranfield email address on the #PBS -M line below:
+## Your email address is NOT your username
+##
+#PBS -m abe 
+PBS -M s.fernandez@cranfield.ac.uk
+##
+## ====================================
+## DO NOT CHANGE THE LINES BETWEEN HERE
+## ====================================
+#PBS -j oe
+#PBS -W sandbox=PRIVATE
+#PBS -k n
+ln -s $PWD $PBS_O_WORKDIR/$PBS_JOBID
+## Change to working directory
+cd $PBS_O_WORKDIR
+## Calculate number of CPUs
+export cpus=`cat $PBS_NODEFILE | wc -l`
+## ========
+## AND HERE
+## ========
+##
+## STEP 5: 
+## 
+##  Load the default application environment
+##  For a specific version add the version number, e.g.
+##  module load intel/2016b
+##
+module load intel
+module load impi
+##
+## STEP 6: 
+## 
+## Run MPI code 
+##
+## The main parameter to modify is your mpi program name
+## - change YOUR_EXECUTABLE to your own filename
+## 
+CFL="0.1"
+npoints="6400 64000"
+schemes="upw lax mcc"
+nprocs="2 4 8 16"
+((m=200)) #last serial STRANDIDs in Tecplot files a little bit above 100, 200 to leave space for more serial sims
+
+#necesitas estar en la carpeta adecuada acuérdate
+#manualmente programas un tiro con 640k
+#
+
+sed -i "s/CFL=.*/CFL=$CFL/" input.nml
+sed -i "s/ncontrolTimes=.*/ncontrolTimes=2/" input.nml
+sed -i "s/infunction=.*/infunction=exp/" input.nml
+echo "Fixed CFL is $CFL"
+echo "Fixed ncontrolTimes is 2"
+echo "Fixed infunction is exp"
+
+mkdir $nprocs
+for l in $nprocs;do
+    cd $l
+    mkdir $schemes
+    cd ..
+done
+mpiifort input_functions.f90 numerical_schemes.f90 misc_subroutines.f90 parallel_linear_advection.f90 -o onenode.out
+
+if [[ ! -f "onenode.out" ]]
+then
+mpiifort input_functions.f90 numerical_schemes.f90 misc_subroutines.f90 parallel_linear_advection.f90 -o onenode.out
+fi
+
+chmod 777 -R ./
+
+for i in $nprocs;do
+    for j in $npoints;do
+        sed -i "s/npoints=.*/npoints=$j/" input.nml
+        #echo "npoints=$j"
+        for k in $schemes;do
+            sed -i "s/scheme=.*/scheme=$k/" input.nml
+            sed -i "s/strandid=.*/strandid=$m/" input.nml
+            echo "Running with nprocs=$i;npoints=$j;scheme=$k"
+            mpirun -machinefile $PBS_NODEFILE -np $i ./onenode.out
+            echo "sim done"
+            for f in *.dat; do mv $f ${f%.dat}_"$i".dat; done
+            for n in norms*; do mv $n ${n%.csv}_"$i".csv; done
+            mv *.dat $i/$k
+            mv norms* $i/$k
+            ((m=m+1))
+        done
+    done
+done
+
+sed "s/xl=.*/xl=-400.0D0/" input.nml
+sed "s/xl=.*/xr=400.0D0/" input.nml
+sed "s/npoints=.*/npoints=640000/" input.nml
+sed "s/scheme=.*/scheme=lax/" input.nml
+nprocs="2 8 16"
+for i in $nprocs;
+    sed -i "s/strandid=.*/strandid=$m/" input.nml
+    echo "Running with nprocs=$i;npoints=$j"
+    mpirun -machinefile $PBS_NODEFILE -np $i ./onenode.out
+    for f in *.dat; do mv $f ${f%.dat}_"$i".dat; done
+    for n in norms*; do mv $n ${n%.csv}_"$i".csv; done
+    mv *.dat $i/$k
+    mv norms* $i/$k
+    ((m=m+1))
+done
+
+## Tidy up the log directory
+## DO NOT CHANGE THE LINE BELOW
+## ============================
+rm $PBS_O_WORKDIR/$PBS_JOBID
+#

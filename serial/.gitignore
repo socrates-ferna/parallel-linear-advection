@@ -1,2 +1,6 @@
 exp/
 sgn/
+*.dat
+*.csv
+log.serial
+comando

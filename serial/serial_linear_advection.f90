@@ -183,8 +183,8 @@ DO
         phi(i,future) = phi(i,present) - absu*dt/dx*(phi(i+increment,present) - phi(i,present))
     END DO
 
-    DO i=correctorstart,correctorend,-increment !!this doesn't work with reverse flow, just as the rest of the loop
-        phi(i,future) = 0.5D0*(phi(i,present) + phi(i,future)) - absu*dt/dx*(phi(i,future) - phi(i-increment,future))
+    DO i=correctorstart,correctorend,-increment !!this doesn't work? with reverse flow, just as the rest of the loop CREO QUE SI FUNCIONA
+        phi(i,future) = 0.5D0*(phi(i,present) + phi(i,future) - absu*dt/dx*(phi(i,future) - phi(i-increment,future)))
     END DO !Thanks to computing the subarray in reverse direction we can avoid using an extra array to store the predictor
  
     phi(intstart:intend,present)=phi(intstart:intend,future)
@@ -284,7 +284,7 @@ filename = 'norms_' // filename(1:i1) // '.csv'
 OPEN(UNIT=101,FILE=filename,STATUS='NEW', ACTION='WRITE',IOSTAT=status,IOMSG=msg)
 WRITE(101,'(A12)') 't,L1,L2,LINF' !File header for norms and control times
 
-102 FORMAT(4(F9.5,','))
+102 FORMAT(4(F13.5,','))
 DO j = 1, ncontrolTimes
     WRITE(101,102) controlTimes(j),L1(j),L2(j),LINF(j)
 END DO
@@ -313,3 +313,7 @@ CLOSE(200)
 CALL CPU_TIME(extime2)
 PRINT*,'Total execution time* is: ',extime2-extime1
 END PROGRAM serial_linear_advection
+!!PENDING
+!-LEAPFROG
+!-REVERSEFLOW IN MACCORMACK
+!-switching back and for in maccormack

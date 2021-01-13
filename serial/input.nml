@@ -1,6 +1,6 @@
 &input_list
 u=1.5D0                 !u (flux velocity)
-scheme=lax
+scheme=mcc
 infunction=exp
 CFL=0.9996
 npoints=6400
@@ -8,7 +8,7 @@ xl=-40.0D0
 xr=40.0D0
 ncontrolTimes=4
 stopTime=10.0D0
-strandid=64
+strandid=106
 /
 
 
